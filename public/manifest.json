@@ -1,0 +1,29 @@
+{
+  "name": "Rakesh Bansal - Portfolio",
+  "short_name": "Rakesh Bansal",
+  "description": "Personal website for Rakesh Bansal",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "orientation": "portrait",
+  "lang": "en",
+  "dir": "ltr"
+}

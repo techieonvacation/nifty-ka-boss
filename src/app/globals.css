@@ -1,0 +1,789 @@
+/* Tailwind CSS directives for base, components, and utilities */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Root variables for light and dark mode */
+:root {
+  /* Font Variables - Professional and clean fonts for a trading mentor website */
+  --font-inter: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-dm-sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-urbanist: "Urbanist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-space-grotesk: "Space Grotesk", -apple-system, BlinkMacSystemFont,
+    sans-serif;
+
+  /* 🎨 LIGHT MODE COLORS */
+  /* Base Backgrounds & Foregrounds */
+  --background: 0 0% 100%; /* Pure white for clean, professional background */
+  --foreground: 222 47% 11%; /* Dark navy for legible text */
+
+  /* Surfaces (Cards, Popovers, Inputs) */
+  --card: 0 0% 98%; /* Light gray for card backgrounds */
+  --card-foreground: 222 47% 11%; /* Dark navy for text on cards */
+  --popover: 0 0% 100%; /* White for popovers */
+  --popover-foreground: 222 47% 11%; /* Dark navy for popover text */
+
+  /* Primary: Blue for trust and professionalism */
+  --primary: 217 91% 60%; /* Vibrant blue (Tailwind blue-500) */
+  --primary-foreground: 0 0% 100%; /* White text on primary buttons */
+
+  /* Secondary: Green for success and growth */
+  --secondary: 145 80% 40%; /* Emerald green (Tailwind emerald-500) */
+  --secondary-foreground: 0 0% 100%; /* White text on secondary buttons */
+
+  /* Accent: Gold/Amber for wealth and highlights */
+  --accent: 38 92% 50%; /* Amber-500 for highlights and CTAs */
+  --accent-foreground: 222 47% 11%; /* Dark navy for text on accents */
+
+  /* Muted: Neutral grays for subtle backgrounds and secondary text */
+  --muted: 210 20% 95%; /* Light gray for muted backgrounds */
+  --muted-foreground: 210 20% 50%; /* Medium gray for muted text */
+
+  /* Destructive: Red for errors and warnings */
+  --destructive: 0 84% 60%; /* Red-500 for error states */
+  --destructive-foreground: 0 0% 100%; /* White text on destructive buttons */
+
+  /* Borders and Inputs */
+  --border: 210 20% 88%; /* Light gray for borders */
+  --input: 0 0% 98%; /* Light gray for input fields */
+  --ring: 217 91% 60%; /* Blue-500 for focus rings */
+
+  /* Border Radius */
+  --radius: 0.5rem; /* Consistent rounded corners for modern look */
+
+  /* Gradients for buttons and highlights */
+  --primary-gradient-bg: linear-gradient(
+    90deg,
+    hsl(217, 91%, 60%),
+    hsl(217, 91%, 50%)
+  ); /* Blue gradient for primary buttons */
+  --secondary-gradient-bg: linear-gradient(
+    90deg,
+    hsl(145, 80%, 40%),
+    hsl(145, 80%, 30%)
+  ); /* Green gradient for secondary buttons */
+  --accent-gradient-bg: linear-gradient(
+    90deg,
+    hsl(38, 92%, 50%),
+    hsl(38, 92%, 40%)
+  ); /* Amber gradient for accents */
+}
+
+/* Dark mode overrides */
+.dark {
+  /* 🌙 DARK MODE COLORS */
+  --background: 222 47% 11%; /* Dark navy for background */
+  --foreground: 0 0% 95%; /* Near-white for text */
+
+  --card: 222 47% 15%; /* Slightly lighter navy for cards */
+  --card-foreground: 0 0% 95%; /* Near-white for card text */
+  --popover: 222 47% 15%; /* Same as card for popovers */
+  --popover-foreground: 0 0% 95%; /* Near-white for popover text */
+
+  --primary: 217 91% 70%; /* Lighter blue for dark mode */
+  --primary-foreground: 222 47% 11%; /* Dark navy for text on primary */
+
+  --secondary: 145 80% 50%; /* Brighter green for dark mode */
+  --secondary-foreground: 222 47% 11%; /* Dark navy for text on secondary */
+
+  --accent: 38 92% 60%; /* Brighter amber for dark mode */
+  --accent-foreground: 222 47% 11%; /* Dark navy for text on accents */
+
+  --muted: 222 47% 20%; /* Darker gray for muted backgrounds */
+  --muted-foreground: 210 20% 70%; /* Light gray for muted text */
+
+  --destructive: 0 84% 70%; /* Brighter red for dark mode */
+  --destructive-foreground: 0 0% 95%; /* Near-white for text on destructive */
+
+  --border: 222 47% 25%; /* Medium gray for borders */
+  --input: 222 47% 18%; /* Darker gray for inputs */
+  --ring: 217 91% 70%; /* Lighter blue for focus rings */
+
+  --primary-gradient-bg: linear-gradient(
+    90deg,
+    hsl(217, 91%, 70%),
+    hsl(217, 91%, 60%)
+  ); /* Adjusted blue gradient */
+  --secondary-gradient-bg: linear-gradient(
+    90deg,
+    hsl(145, 80%, 50%),
+    hsl(145, 80%, 40%)
+  ); /* Adjusted green gradient */
+  --accent-gradient-bg: linear-gradient(
+    90deg,
+    hsl(38, 92%, 60%),
+    hsl(38, 92%, 50%)
+  ); /* Adjusted amber gradient */
+}
+
+/* Base layer for global styles */
+@layer base {
+  /* Apply border color globally */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  /* Body styling for consistent layout and typography */
+  body {
+    display: flex;
+    flex-direction: column;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-urbanist);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.5;
+  }
+
+  /* Main content area */
+  main {
+    flex: 1;
+  }
+}
+
+/* Global styles for resets and consistency */
+html,
+*,
+body {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: hsl(var(--accent));
+  transition: color 0.2s ease;
+}
+
+/* Custom scrollbar for modern look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--secondary));
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Typography styles */
+p {
+  font-family: var(--font-inter);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-urbanist);
+  font-weight: 600;
+}
+
+strong {
+  font-family: var(--font-dm-sans);
+  font-weight: 700;
+}
+
+.how-it-works ul {
+  margin: 0;
+  padding: 0;
+  list-style: disc;
+}
+.how-it-works ul li {
+  margin: 0 0 12px 15px !important;
+}
+
+/*====== Renko Report Page CSS ========*/
+.renko-report p {
+  font-size: 20px;
+  line-height: 40px;
+}
+.renko-report .renko-01 {
+  overflow: hidden;
+  text-align: center;
+}
+.renko-report .renko-01 ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.renko-report .renko-01 ul li {
+  width: 32%;
+  float: left;
+  margin: 15px 2% 0 0;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 20px 20px;
+  border-radius: 10px;
+  text-align: center;
+  min-height: 120px;
+}
+.renko-report .renko-01 ul li:last-child {
+  margin-right: 0;
+}
+.renko-report .note {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 15px;
+  font-size: 13px;
+}
+
+/*====== Customer Grievances =========*/
+.customer-01 {
+  overflow: hidden;
+}
+.customer-01 .details-row {
+  overflow: hidden;
+}
+.customer-01 .details-row .spot-1 {
+  width: 25%;
+  float: left;
+}
+.customer-01 .details-row .spot-3 {
+  width: 50%;
+  float: left;
+}
+.customer-01 .details-row .spot-3 p {
+  margin: 0 0 10px 30px;
+}
+.customer-01 .details-row .spot-3 span {
+  float: left;
+  margin: 0 10px 0 -30px;
+}
+.customer-01 hr {
+  background: rgba(0, 0, 0, 0.3);
+  height: 2px;
+  margin: 15px 0 30px;
+}
+
+/*==== Courses New pages =====*/
+.kurukshetra-new .course-header {
+  padding: 80px 0 120px;
+}
+.kurukshetra-new .course-header p {
+  color: #4ade80;
+  font-size: 13px;
+  margin: 15px 0;
+}
+.kurukshetra-new .course-header h1 {
+  color: #fff;
+  font-size: 45px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin: 15px 0;
+}
+.kurukshetra-new .course-header ul {
+  list-style: none;
+  padding: 0;
+  margin: 45px 0 70px;
+  width: 65%;
+  clear: both;
+  overflow: hidden;
+}
+.kurukshetra-new .course-header ul li {
+  color: #fff;
+  width: 25%;
+  float: left;
+  font-size: 14px;
+}
+.kurukshetra-new .course-header ul li span {
+  float: left;
+  height: 20px;
+  margin: 2px 10px 20px 0;
+}
+.kurukshetra-new .course-header ul li span img {
+  height: 18px;
+  width: auto;
+}
+.kurukshetra-new .course-header .btn-enroll {
+  background-color: #d3f3df;
+  color: #000;
+  padding: 14px 25px;
+  border-radius: 10px;
+  margin: 0 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.floating-widget {
+  background-color: #fff;
+  border-radius: 15px;
+  width: 400px;
+  height: 340px;
+  padding: 20px;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 100px;
+  margin: auto;
+  z-index: 10;
+  box-shadow: 0px 2px 7px 2px rgba(0, 0, 0, 0.2);
+}
+.floating-widget .video {
+  width: 100%;
+  height: 180px;
+  background-color: #000;
+  color: #fff;
+  padding: 0;
+  border-radius: 10px;
+  margin: 0 0 15px;
+}
+.floating-widget .info {
+  overflow: hidden;
+}
+.floating-widget .info span {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  float: left;
+  background-color: #000;
+  margin: 1px 7px 0 0;
+}
+.floating-widget .info p {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  margin: 0;
+  padding: 0;
+}
+.floating-widget .info h5 {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 25px;
+}
+.floating-widget .right-info {
+  float: right;
+  margin: -42px 0 0;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 24px;
+  text-align: right;
+}
+.floating-widget .right-info span {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 13px;
+  display: block;
+  font-weight: 400;
+}
+.floating-widget .btn-enroll {
+  color: #fff;
+  font-size: 16px;
+  padding: 12px 25px;
+  border-radius: 5px;
+  margin: 15px 0 0;
+  width: 100%;
+  text-align: center;
+  display: block;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.course-content .empty-rightspace {
+  width: 65%;
+  margin: 70px 0;
+}
+.course-content p {
+  margin: 15px 0;
+}
+.course-content h2 {
+  color: #7e22ce;
+  font-size: 25px;
+  font-weight: 600;
+  margin: 25px 0 10px;
+}
+.course-content .greentick-bullets ul {
+  margin: 0;
+  padding: 0;
+}
+.course-content .greentick-bullets li {
+  list-style: none;
+  padding: 8px 0;
+}
+.course-content .greentick-bullets li:before {
+  content: "";
+  width: 23px;
+  height: 21px;
+  background-image: url("../../public/images/icon-tick-green.png");
+  background-size: 100%;
+  background-repeat: no-repeat;
+  display: inline-block;
+  margin: 6px 10px -5px 0px;
+}
+.course-content .about-mentor {
+  border: 1px solid #000;
+  padding: 30px 30px 30px;
+  border-radius: 15px;
+  margin: 30px 0;
+  overflow: hidden;
+}
+.course-content .about-mentor figure {
+  width: 300px;
+  height: 360px;
+  float: left;
+  margin: 0 20px 0 0;
+  text-align: center;
+  color: #000;
+}
+.course-content .about-mentor figure img {
+  width: 100%;
+}
+.course-content .about-mentor h2 {
+  float: left;
+  margin: 0 0 10px;
+  color: #22c55e;
+  font-size: 32px;
+  line-height: 32px;
+}
+.course-content .about-mentor h2 span {
+  font-size: 15px;
+  color: #fff;
+}
+.course-content .about-mentor ul {
+  padding: 0 0 0;
+  float: left;
+  width: 60%;
+}
+.course-content .about-mentor li {
+  color: #fff;
+  list-style: disc;
+  line-height: 26px;
+  margin: 0 0 16px 20px;
+}
+.course-content .subscription-table table {
+  border: 1px solid #a855f7;
+  width: 100%;
+}
+.course-content .subscription-table table th,
+.course-content .subscription-table table td {
+  padding: 20px 20px;
+  border: 2px solid #a855f7;
+  text-align: center;
+}
+.course-content .subscription-table table tr th:first-child,
+.course-content .subscription-table table tr td:first-child {
+  background: #a855f7;
+  color: #fff;
+}
+.course-content .coupon {
+  background: #d3f3df;
+  color: #000;
+  padding: 15px 25px;
+  border-radius: 15px;
+  font-size: 18px;
+  margin: 25px 3% 25px 0;
+  text-align: center;
+  width: 40%;
+  float: left;
+}
+.course-content .coupon img {
+  height: auto;
+  margin: 0 auto 10px;
+}
+.course-content .features {
+  width: 57%;
+  float: left;
+  margin: 25px 0;
+  font-size: 20px;
+  background: #eeddfd;
+  padding: 15px 25px;
+  border-radius: 15px;
+  line-height: 42px;
+}
+.cta-box-full {
+  margin: 0 0 60px;
+}
+.cta-box-full a {
+  background: #333;
+  color: #fff;
+  padding: 16px 25px;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 10px;
+  margin: 30px 0;
+  display: block;
+  clear: both;
+  text-align: center;
+}
+
+/* Chakravyuh New */
+.chakravyuh-new .subscription-table {
+  width: 65%;
+  float: left;
+  margin: 0 3% 20px 0;
+}
+.chakravyuh-new .course-content .coupon {
+  width: 32%;
+  float: left;
+  margin: 0 0 20px;
+}
+.chakravyuh-new .course-content .coupon img {
+  width: 38px;
+}
+
+.course-combo .floating-widget .video {
+  height: 202px;
+}
+.course-combo .floating-widget {
+  height: 365px;
+}
+
+@media (max-width: 767px) {
+  .renko-report .renko-01 ul li {
+    width: 100%;
+    margin: 15px 0 0;
+  }
+
+  /* Courses New pages - Kurukshetra */
+  .kurukshetra-new .course-header {
+    padding: 40px 0 60px;
+    text-align: center;
+  }
+  .kurukshetra-new .course-header p {
+    margin: 6px 0;
+  }
+  .kurukshetra-new .course-header h1 {
+    font-size: 30px;
+    font-weight: 600;
+    margin: 6px 0;
+  }
+  .kurukshetra-new .course-header .btn-enroll {
+    padding: 12px 25px;
+    margin: 0 0 15px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    font-size: 14px;
+  }
+  .floating-widget,
+  .course-combo .floating-widget {
+    background-color: #fff;
+    width: 100%;
+    height: 67px;
+    padding: 10px;
+    position: fixed;
+    top: auto;
+    bottom: -1px;
+    right: 0;
+    margin: auto;
+    z-index: 10;
+    box-shadow: 0px 2px 7px 2px rgba(0, 0, 0, 0.2);
+    left: 0;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .floating-widget .video,
+  .floating-widget .info,
+  .floating-widget .right-info {
+    display: none;
+  }
+  .floating-widget .btn-enroll {
+    margin: 0;
+  }
+  .course-content .empty-rightspace {
+    width: 100%;
+    margin: 20px 0;
+  }
+  .course-content .container {
+    padding: 0 20px;
+  }
+  .course-content h2 {
+    color: #7e22ce;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 25px 0 5px;
+  }
+  .course-content .greentick-bullets li {
+    list-style: none;
+    padding: 6px 0 5px 26px;
+    font-size: 14px;
+  }
+  .course-content .greentick-bullets li:before {
+    content: "";
+    width: 18px;
+    height: 16px;
+    background-image: url(/_next/static/media/icon-tick-green.74a633b7.png);
+    background-size: 100%;
+    background-repeat: no-repeat;
+    display: inline-block;
+    margin: 6px 5px -4px -26px;
+  }
+  .course-content .about-mentor {
+    border: 1px solid #000;
+    padding: 20px 15px 15px;
+    margin: 30px 0;
+  }
+  .course-content .about-mentor figure {
+    width: 200px;
+    height: auto;
+    float: none;
+    margin: 0 auto;
+  }
+  .course-content .about-mentor h2 {
+    float: none;
+    font-size: 25px;
+    line-height: 30px;
+    text-align: center;
+    margin: 10px 0;
+  }
+  .course-content .about-mentor ul {
+    width: 100%;
+  }
+  .course-content .about-mentor li {
+    line-height: 26px;
+    margin: 0 0 10px 20px;
+    font-size: 14px;
+  }
+  .course-content p {
+    margin: 15px 0;
+    font-size: 14px;
+  }
+  .subscription-table {
+    overflow-x: auto;
+  }
+  .course-content .subscription-table table th,
+  .course-content .subscription-table table td {
+    padding: 10px 10px;
+    border: 2px solid #a855f7;
+    font-size: 14px;
+  }
+  .course-content .coupon {
+    width: 100%;
+    margin: 20px 0;
+  }
+  .course-content .features {
+    width: 100%;
+    margin: 0px 0 15px;
+    padding: 10px 25px;
+    line-height: 42px;
+  }
+  .cta-box-full {
+    margin: 0 0 40px;
+  }
+  .cta-box-full a {
+    padding: 14px 25px;
+    font-size: 15px;
+  }
+  .kurukshetra-new .course-header .container {
+    padding: 0 15px;
+  }
+  .kurukshetra-new .course-header ul {
+    width: 100%;
+    margin: 45px 0 30px;
+  }
+  .kurukshetra-new .course-header ul li {
+    width: 50%;
+    margin: 0 0 15px;
+    text-align: left;
+  }
+
+  /* Chakravyuh New */
+  .chakravyuh-new .subscription-table {
+    width: 100%;
+  }
+  .chakravyuh-new .course-content .coupon {
+    width: 100%;
+  }
+  .course-combo .course-header ul li {
+    width: 100%;
+    margin: 0 0 0px;
+    text-align: left;
+  }
+}
+
+/* Comparison Table */
+.comparison-table {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  text-align: center;
+  margin: 25px auto;
+  max-width: 1000px;
+  grid-gap: 0;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: visible;
+  background-color: #fff;
+  padding-bottom: 20px;
+}
+.hearzap-heading {
+  transform: translateY(-20px);
+  padding: 25px 5px;
+  background-color: #fff;
+  border-radius: 10px 10px 0 0;
+  width: 100%;
+  position: relative;
+  z-index: 3;
+  box-shadow: 0px -10px 15px -5px rgba(0, 0, 0, 0.1),
+    -5px 0 10px -5px rgba(0, 0, 0, 0.05), 5px 0 10px -5px rgba(0, 0, 0, 0.05);
+}
+
+.heading {
+  font-weight: 600;
+  padding: 20px 10px;
+  background-color: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feature {
+  padding: 15px 25px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.hearpaz {
+  padding: 15px 22px;
+  background-color: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.2);
+}
+.other-brand {
+  padding: 15px 22px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+.custom-float {
+  width: 2px;
+  height: 2px;
+  top: 50%;
+  left: 50%;
+  animation: float 12s linear infinite;
+}
