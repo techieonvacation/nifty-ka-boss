@@ -9,7 +9,6 @@ import {
   X,
   Settings,
   RefreshCw,
-  Info,
   Clock,
 } from "lucide-react";
 
@@ -66,6 +65,7 @@ function Header({
 
   const handleThemeToggle = () => {
     // Pass the new theme state (opposite of current) to the parent
+    // Theme is true when dark mode is active, so we want to toggle to light mode
     setTheme(!Theme);
   };
 
@@ -89,9 +89,9 @@ function Header({
       <div
         className={`${
           Theme
-            ? "bg-white border-b border-gray-200 text-gray-900 shadow-sm"
-            : "bg-gray-900 border-b border-gray-700 text-white shadow-lg"
-        } w-full transition-all duration-300 ease-in-out`}
+            ? "bg-gray-900 border-b border-gray-700 text-white shadow-xl"
+            : "bg-white border-b border-gray-200 text-gray-900 shadow-lg"
+        } w-full transition-all duration-300 ease-in-out backdrop-blur-sm`}
       >
         <div className="flex items-center justify-between px-3 md:px-6 py-3 md:py-4">
           {/* Left - Symbol and Interval */}
@@ -99,8 +99,8 @@ function Header({
             <div
               className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
                 Theme
-                  ? "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-                  : "bg-blue-900/20 hover:bg-blue-900/30 text-blue-300 border border-blue-700/30"
+                  ? "bg-blue-900/20 hover:bg-blue-900/30 text-blue-300 border border-blue-700/30"
+                  : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
               } text-sm md:text-base font-medium`}
             >
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
@@ -109,8 +109,8 @@ function Header({
             <div
               className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
                 Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } text-sm md:text-base font-medium`}
             >
               <Clock size={14} className="mr-1" />
@@ -121,16 +121,16 @@ function Header({
           {/* Center - Current Candle Data */}
           {currentCandleData && (
             <div className="hidden md:flex items-center space-x-4 text-sm">
-              <div className={`${Theme ? "text-gray-700" : "text-gray-300"}`}>
+              <div className={`${Theme ? "text-gray-300" : "text-gray-700"}`}>
                 Date: {currentCandleData.date}
               </div>
-              <div className={`${Theme ? "text-gray-700" : "text-gray-300"}`}>
+              <div className={`${Theme ? "text-gray-300" : "text-gray-700"}`}>
                 O: {currentCandleData.open.toFixed(2)} H:{" "}
                 {currentCandleData.high.toFixed(2)} L:{" "}
                 {currentCandleData.low.toFixed(2)} C:{" "}
                 {currentCandleData.close.toFixed(2)}
               </div>
-              <div className={`${Theme ? "text-gray-700" : "text-gray-300"}`}>
+              <div className={`${Theme ? "text-gray-300" : "text-gray-700"}`}>
                 Vol: {(currentCandleData.volume / 1000000).toFixed(2)}M
               </div>
             </div>
@@ -146,8 +146,8 @@ function Header({
               onClick={handleScreenshot}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Take Screenshot"
             >
@@ -162,11 +162,11 @@ function Header({
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 CandleSignals
                   ? Theme
-                    ? "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
-                    : "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
+                    ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
+                    : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
                   : Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Toggle Candle Signals"
             >
@@ -182,11 +182,11 @@ function Header({
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 KemadOption
                   ? Theme
-                    ? "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
-                    : "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                    ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                    : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
                   : Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Toggle Trend Lines"
             >
@@ -202,11 +202,11 @@ function Header({
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 twoScaleEnabled
                   ? Theme
-                    ? "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300"
-                    : "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
+                    ? "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
+                    : "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300"
                   : Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Toggle Dual Price Scales"
             >
@@ -221,8 +221,8 @@ function Header({
               onClick={() => window.location.reload()}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 Theme
-                  ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                  : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Refresh Data"
             >
@@ -252,8 +252,8 @@ function Header({
             <button
               className={`p-2 rounded-lg transition-all duration-200 ${
                 Theme
-                  ? "bg-gray-200 hover:bg-gray-300 text-gray-900 border border-gray-300"
-                  : "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                  ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                  : "bg-gray-200 hover:bg-gray-300 text-gray-900 border border-gray-300"
               }`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               title="Menu"
@@ -270,8 +270,8 @@ function Header({
           mobileMenuOpen ? "top-16" : "-top-64"
         } ${
           Theme
-            ? "bg-white border-b border-gray-200 text-gray-900 shadow-lg"
-            : "bg-gray-900 border-b border-gray-700 text-white shadow-xl"
+            ? "bg-gray-900 border-b border-gray-700 text-white shadow-xl"
+            : "bg-white border-b border-gray-200 text-gray-900 shadow-lg"
         }`}
       >
         <div className="flex items-center justify-between px-4 py-3">
@@ -285,8 +285,8 @@ function Header({
             onClick={handleScreenshot}
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               Theme
-                ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
             } group`}
           >
             <Camera
@@ -301,11 +301,11 @@ function Header({
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               CandleSignals
                 ? Theme
-                  ? "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
-                  : "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
+                  ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
+                  : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
                 : Theme
-                ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
             } group`}
           >
             <ArrowDownUp
@@ -320,11 +320,11 @@ function Header({
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               KemadOption
                 ? Theme
-                  ? "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
-                  : "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                  ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
                 : Theme
-                ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
             } group`}
           >
             <TrendingDown
@@ -339,11 +339,11 @@ function Header({
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               twoScaleEnabled
                 ? Theme
-                  ? "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300"
-                  : "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
+                  ? "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
+                  : "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300"
                 : Theme
-                ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
             } group`}
           >
             <BarChart2
@@ -357,8 +357,8 @@ function Header({
             onClick={() => window.location.reload()}
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               Theme
-                ? "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-                : "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
             } group`}
           >
             <RefreshCw
@@ -367,23 +367,6 @@ function Header({
             />
             <span className="text-sm font-medium">Refresh</span>
           </button>
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div
-        className={`${
-          Theme
-            ? "bg-blue-50 border-b border-blue-200 text-blue-800"
-            : "bg-blue-900/10 border-b border-blue-700/30 text-blue-300"
-        } px-4 py-2 text-xs text-center transition-all duration-300`}
-      >
-        <div className="flex items-center justify-center space-x-2">
-          <Info size={12} />
-          <span>
-            Professional Trading Chart - Real-time data with 5-minute delay |
-            Powered by TradingView
-          </span>
         </div>
       </div>
     </div>

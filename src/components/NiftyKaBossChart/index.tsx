@@ -287,6 +287,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
   // Theme toggle handler
   const handleThemeToggle = useCallback((isDark: boolean) => {
+    // isDark = true means we want dark mode, isDark = false means we want light mode
     setTheme(isDark ? "dark" : "light");
   }, []);
 
@@ -446,6 +447,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         {/* Stock Chart - Left Side */}
         <div className="relative flex-1">
           <StockChart
+            key={theme} // Force re-render when theme changes
             ref={chartRef}
             symbol={symbol}
             exchange={exchange}

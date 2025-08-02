@@ -168,7 +168,6 @@ This document outlines the production-ready RKB API integration with custom indi
 RKB_USERNAME=your_username
 RKB_PASSWORD=your_password
 RKB_API_URL=https://rkbforu.com:9026
-NIFTY_MOVEMENT_API_URL=https://rkbforu.com:9031
 ```
 
 ### Cache Configuration

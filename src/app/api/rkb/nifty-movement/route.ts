@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 // Environment variable validation schema
+// NIFTY_MOVEMENT_API_URL should be the base URL (e.g., https://rkbforu.com:9031)
+// The complete endpoint will be constructed as: ${NIFTY_MOVEMENT_API_URL}/nifty_movement
 const envSchema = z.object({
   NIFTY_MOVEMENT_API_URL: z.string().url().default("https://rkbforu.com:9031"),
 });
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout
 
-    const response = await fetch(env.NIFTY_MOVEMENT_API_URL, {
+    const response = await fetch(`${env.NIFTY_MOVEMENT_API_URL}/nifty_movement`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
