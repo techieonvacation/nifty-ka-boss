@@ -19,10 +19,6 @@ interface HeaderProps {
   setTheme: (theme: boolean) => void;
   Theme: boolean;
   setTakeSnapshot: (snapshot: boolean) => void;
-  setCandleSignals: (signals: boolean) => void;
-  CandleSignals: boolean;
-  setKemadOption: (option: boolean) => void;
-  KemadOption: boolean;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   showStatsPanel?: boolean;
@@ -37,6 +33,10 @@ interface HeaderProps {
   };
   twoScaleEnabled?: boolean;
   setTwoScaleEnabled?: (enabled: boolean) => void;
+  showDecisionSignals?: boolean;
+  setShowDecisionSignals?: (signals: boolean) => void;
+  showPlotline?: boolean;
+  setShowPlotline?: (visible: boolean) => void;
 }
 
 function Header({
@@ -46,10 +46,6 @@ function Header({
   setTheme,
   Theme,
   setTakeSnapshot,
-  setCandleSignals,
-  CandleSignals,
-  setKemadOption,
-  KemadOption,
   mobileMenuOpen,
   setMobileMenuOpen,
   showStatsPanel,
@@ -57,6 +53,10 @@ function Header({
   currentCandleData,
   twoScaleEnabled = false,
   setTwoScaleEnabled,
+  showDecisionSignals = true,
+  setShowDecisionSignals,
+  showPlotline = true,
+  setShowPlotline,
 }: HeaderProps) {
   const handleScreenshot = () => {
     setTakeSnapshot(true);
@@ -69,17 +69,21 @@ function Header({
     setTheme(!Theme);
   };
 
-  const handleSignalsToggle = () => {
-    setCandleSignals(!CandleSignals);
-  };
-
-  const handleTrendsToggle = () => {
-    setKemadOption(!KemadOption);
-  };
-
   const handleTwoScaleToggle = () => {
     if (setTwoScaleEnabled) {
       setTwoScaleEnabled(!twoScaleEnabled);
+    }
+  };
+
+  const handleDecisionSignalsToggle = () => {
+    if (setShowDecisionSignals) {
+      setShowDecisionSignals(!showDecisionSignals);
+    }
+  };
+
+  const handlePlotlineToggle = () => {
+    if (setShowPlotline) {
+      setShowPlotline(!showPlotline);
     }
   };
 
@@ -158,9 +162,9 @@ function Header({
             </button>
 
             <button
-              onClick={handleSignalsToggle}
+              onClick={handleDecisionSignalsToggle}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
-                CandleSignals
+                showDecisionSignals
                   ? Theme
                     ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
                     : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
@@ -168,7 +172,7 @@ function Header({
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
-              title="Toggle Candle Signals"
+              title="Toggle Decision Signals"
             >
               <ArrowDownUp
                 size={16}
@@ -178,9 +182,9 @@ function Header({
             </button>
 
             <button
-              onClick={handleTrendsToggle}
+              onClick={handlePlotlineToggle}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
-                KemadOption
+                showPlotline
                   ? Theme
                     ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
                     : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
@@ -188,7 +192,7 @@ function Header({
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
-              title="Toggle Trend Lines"
+              title="Toggle Plotline Indicator"
             >
               <TrendingDown
                 size={16}
@@ -297,9 +301,9 @@ function Header({
           </button>
 
           <button
-            onClick={handleSignalsToggle}
+            onClick={handleDecisionSignalsToggle}
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
-              CandleSignals
+              showDecisionSignals
                 ? Theme
                   ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
                   : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
@@ -315,24 +319,24 @@ function Header({
             <span className="text-sm font-medium">Signals</span>
           </button>
 
-          <button
-            onClick={handleTrendsToggle}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
-              KemadOption
-                ? Theme
-                  ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
-                  : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
-                : Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-            } group`}
-          >
-            <TrendingDown
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Trends</span>
-          </button>
+                     <button
+             onClick={handlePlotlineToggle}
+             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+               showPlotline
+                 ? Theme
+                   ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                   : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
+                 : Theme
+                 ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                 : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+             } group`}
+           >
+             <TrendingDown
+               size={16}
+               className="group-hover:scale-110 transition-transform"
+             />
+             <span className="text-sm font-medium">Trends</span>
+           </button>
 
           <button
             onClick={handleTwoScaleToggle}

@@ -54,14 +54,13 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   enableTwoScale = true, // Default to true for two-scale feature
 }) => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [, setTakeSnapshot] = useState(false);
-  const [candleSignals, setCandleSignals] = useState(false);
-  const [kemadOption, setKemadOption] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showStatsPanel, setShowStatsPanel] = useState(false);
   const [currentInterval] = useState(interval);
   const [showDataPanel] = useState(true);
   const [twoScaleEnabled, setTwoScaleEnabled] = useState(enableTwoScale);
+  const [showDecisionSignals, setShowDecisionSignals] = useState(true); // Add state for decision signals visibility
+  const [showPlotline, setShowPlotline] = useState(true); // Add state for plotline visibility
 
   // Chart data state
   const [currentPrice, setCurrentPrice] = useState<number>(24844.55);
@@ -148,8 +147,25 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     ma200: 25210.55,
   });
 
+  // Chart ref for accessing chart methods
   const chartRef = useRef<StockChartRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Professional screenshot handler - captures only the main chart area
+  const handleScreenshot = useCallback(async () => {
+    if (chartRef.current?.takeScreenshot) {
+      try {
+        await chartRef.current.takeScreenshot();
+      } catch (error) {
+        console.error("Error taking screenshot:", error);
+      }
+    }
+  }, []);
+
+  // Screenshot handler for Header component
+  const handleScreenshotForHeader = useCallback(() => {
+    handleScreenshot();
+  }, [handleScreenshot]);
 
   // Load RKB data on component mount
   useEffect(() => {
@@ -296,66 +312,6 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     setTwoScaleEnabled(enabled);
   }, []);
 
-  // Screenshot handler - capture entire chart with data panel
-  const handleScreenshot = useCallback(() => {
-    setTakeSnapshot(true);
-    // Auto-download functionality with full chart capture
-    setTimeout(() => {
-      if (containerRef.current) {
-        // Use html2canvas to capture the entire chart container
-        import("html2canvas")
-          .then(({ default: html2canvas }) => {
-            html2canvas(containerRef.current!, {
-              backgroundColor: theme === "dark" ? "#1a1a1a" : "#ffffff",
-              scale: 2, // Higher quality
-              useCORS: true,
-              allowTaint: true,
-            })
-              .then((canvas) => {
-                const link = document.createElement("a");
-                link.download = `${symbol}-${exchange}-${
-                  new Date().toISOString().split("T")[0]
-                }.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                setTakeSnapshot(false);
-              })
-              .catch((error) => {
-                console.error("Screenshot failed:", error);
-                setTakeSnapshot(false);
-              });
-          })
-          .catch((error) => {
-            console.error("html2canvas not available:", error);
-            // Fallback to canvas capture
-            if (chartRef.current?.chartRef?.current) {
-              const canvas =
-                chartRef.current.chartRef.current.querySelector("canvas");
-              if (canvas) {
-                const link = document.createElement("a");
-                link.download = `${symbol}-${exchange}-${
-                  new Date().toISOString().split("T")[0]
-                }.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-              }
-            }
-            setTakeSnapshot(false);
-          });
-      }
-    }, 100);
-  }, [symbol, exchange, theme]);
-
-  // Candle signals toggle handler
-  const handleCandleSignalsToggle = useCallback((signals: boolean) => {
-    setCandleSignals(signals);
-  }, []);
-
-  // Kemad option toggle handler
-  const handleKemadOptionToggle = useCallback((option: boolean) => {
-    setKemadOption(option);
-  }, []);
-
   // Mobile menu toggle handler
   const handleMobileMenuToggle = useCallback((open: boolean) => {
     setMobileMenuOpen(open);
@@ -364,6 +320,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   // Stats panel toggle handler
   const handleStatsPanelToggle = useCallback((panel: boolean) => {
     setShowStatsPanel(panel);
+  }, []);
+
+  // Decision signals visibility toggle handler
+  const handleDecisionSignalsToggle = useCallback((signals: boolean) => {
+    setShowDecisionSignals(signals);
+  }, []);
+
+  // Plotline visibility toggle handler
+  const handlePlotlineToggle = useCallback((visible: boolean) => {
+    setShowPlotline(visible);
   }, []);
 
   // Keyboard shortcuts
@@ -430,17 +396,17 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         symbol={symbol}
         setTheme={handleThemeToggle}
         Theme={theme === "dark"}
-        setTakeSnapshot={handleScreenshot}
-        setCandleSignals={handleCandleSignalsToggle}
-        CandleSignals={candleSignals}
-        setKemadOption={handleKemadOptionToggle}
-        KemadOption={kemadOption}
+        setTakeSnapshot={handleScreenshotForHeader}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={handleMobileMenuToggle}
         showStatsPanel={showStatsPanel}
         setShowStatsPanel={handleStatsPanelToggle}
         twoScaleEnabled={twoScaleEnabled}
         setTwoScaleEnabled={handleTwoScaleToggle}
+        showDecisionSignals={showDecisionSignals}
+        setShowDecisionSignals={handleDecisionSignalsToggle}
+        showPlotline={showPlotline}
+        setShowPlotline={handlePlotlineToggle}
       />
 
       <div className="relative grid grid-cols-[70%_30%]">
@@ -454,15 +420,15 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             interval={currentInterval}
             theme={theme}
             showVolume={true}
-            showIndicators={candleSignals}
+            showIndicators={false} // candleSignals is removed
             showGrid={true}
             showCrosshair={true}
             height={height}
             width={width}
             className="w-full h-full dark:bg-gray-900"
             enableTwoScale={twoScaleEnabled}
-            showPlotline={true}
-            showDecisionSignals={true}
+            showPlotline={showPlotline}
+            showDecisionSignals={showDecisionSignals}
           />
 
           {/* Stats Panel for Mobile */}

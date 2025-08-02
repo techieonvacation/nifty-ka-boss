@@ -86,6 +86,7 @@ export interface StockChartRef {
   chart: IChartApi | null;
   refresh: () => Promise<void>;
   getCurrentData: () => ChartData[];
+  takeScreenshot: () => Promise<void>;
 }
 
 // Performance optimization constants
@@ -137,6 +138,8 @@ const THEME_COLORS = {
 const StockChart = forwardRef<StockChartRef, StockChartProps>(
   (
     {
+      symbol = "NIFTY",
+      exchange = "NSE",
       theme = "dark",
       showVolume = true,
       showIndicators = true,
@@ -157,7 +160,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-    const candlestickLeftSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+    const candlestickLeftSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(
+      null
+    );
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
     const smaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const emaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -184,16 +189,61 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Memoized color scheme for performance
     const colors = useMemo(() => THEME_COLORS[theme], [theme]);
 
+    // Store current chart data for external access
+    const currentChartData = useRef<ChartData[]>([]);
+
+    // Professional screenshot functionality for chart capture
+    const takeChartScreenshot = useCallback(async () => {
+      if (!chartContainerRef.current) {
+        console.warn("Chart container not available for screenshot");
+        return;
+      }
+
+      try {
+        // Dynamically import html2canvas for optimal bundle size
+        const html2canvas = (await import('html2canvas')).default;
+        
+        // Capture only the main chart area (excluding data panel and header)
+        const canvas = await html2canvas(chartContainerRef.current, {
+          backgroundColor: colors.background, // Match chart theme
+          scale: 2, // High resolution for professional quality
+          useCORS: true, // Handle cross-origin images
+          allowTaint: true, // Allow external images
+          logging: false, // Disable debug logging
+          width: chartContainerRef.current.offsetWidth,
+          height: chartContainerRef.current.offsetHeight,
+        });
+
+        // Convert canvas to blob and trigger automatic download
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Create download link with timestamped filename
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${symbol || 'NIFTY'}_${exchange || 'NSE'}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
+            
+            // Trigger download and cleanup
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url); // Free memory
+          }
+        }, 'image/png', 0.95); // High quality PNG format
+
+      } catch (error) {
+        console.error("Error taking screenshot:", error);
+      }
+    }, [colors.background, symbol, exchange]);
+
     // Expose ref to parent with enhanced functionality
     useImperativeHandle(ref, () => ({
       chartRef: chartContainerRef,
       chart: chartRef.current,
       refresh: loadData,
       getCurrentData: () => currentChartData.current,
+      takeScreenshot: takeChartScreenshot, // Add screenshot functionality
     }));
-
-    // Store current chart data for external access
-    const currentChartData = useRef<ChartData[]>([]);
 
     // Debounced resize handler for smooth performance
     const resizeTimeoutRef = useRef<NodeJS.Timeout>();
@@ -229,7 +279,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return limitedData;
       } catch (error) {
         console.error("Error loading RKB data:", error);
-        setChartState(prev => ({ ...prev, error: "Failed to load chart data" }));
+        setChartState((prev) => ({
+          ...prev,
+          error: "Failed to load chart data",
+        }));
         return [];
       }
     }, []);
@@ -264,7 +317,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         const multiplier = 2 / (period + 1);
 
         // First EMA value is SMA
-        let ema = data.slice(0, period).reduce((acc, item) => acc + item.close, 0) / period;
+        let ema =
+          data.slice(0, period).reduce((acc, item) => acc + item.close, 0) /
+          period;
         emaData.push({ time: data[period - 1].time, value: ema });
 
         // Calculate EMA for remaining periods
@@ -295,8 +350,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
 
         // Calculate initial average gain and loss
-        let avgGain = gains.slice(0, period).reduce((acc, gain) => acc + gain, 0) / period;
-        let avgLoss = losses.slice(0, period).reduce((acc, loss) => acc + loss, 0) / period;
+        let avgGain =
+          gains.slice(0, period).reduce((acc, gain) => acc + gain, 0) / period;
+        let avgLoss =
+          losses.slice(0, period).reduce((acc, loss) => acc + loss, 0) / period;
 
         // Calculate RSI for the first period
         const rs = avgGain / avgLoss;
@@ -334,7 +391,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         // Calculate MACD line
         for (let i = 0; i < ema26.length; i++) {
-          const macdValue = ema12[i + (slowPeriod - fastPeriod)]?.value - ema26[i].value;
+          const macdValue =
+            ema12[i + (slowPeriod - fastPeriod)]?.value - ema26[i].value;
           if (macdValue !== undefined) {
             macdLine.push({ time: ema26[i].time, value: macdValue });
           }
@@ -354,7 +412,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         // Calculate histogram
         for (let i = 0; i < signalEMA.length; i++) {
-          const histogramValue = macdLine[i + (signalPeriod - 1)]?.value - signalEMA[i].value;
+          const histogramValue =
+            macdLine[i + (signalPeriod - 1)]?.value - signalEMA[i].value;
           if (histogramValue !== undefined) {
             histogram.push({ time: signalEMA[i].time, value: histogramValue });
           }
@@ -372,7 +431,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Enhanced colored plotline segments with smooth transitions
     const createColoredPlotlineSegments = useCallback(
       (chartData: ChartData[]) => {
-        if (!chartRef.current || !showPlotline || !chartContainerRef.current) return;
+        if (!chartRef.current || !showPlotline || !chartContainerRef.current)
+          return;
 
         // Clear existing segments
         plotlineSegmentsRef.current.forEach((series) => {
@@ -403,12 +463,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
           if (currentItem.trend !== previousItem.trend) {
             if (i > segmentStart) {
-              const segmentData = plotlineData.slice(segmentStart, i).map((item) => ({
-                time: item.time,
-                value: item.plotline!,
-              }));
+              const segmentData = plotlineData
+                .slice(segmentStart, i)
+                .map((item) => ({
+                  time: item.time,
+                  value: item.plotline!,
+                }));
 
-              const trendUpper = (previousItem.trend || "NEUTRAL").toUpperCase();
+              const trendUpper = (
+                previousItem.trend || "NEUTRAL"
+              ).toUpperCase();
               const color =
                 trendUpper === "BUY"
                   ? colors.buySignal
@@ -446,7 +510,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             value: item.plotline!,
           }));
 
-          const trendUpper = (plotlineData[plotlineData.length - 1].trend || "NEUTRAL").toUpperCase();
+          const trendUpper = (
+            plotlineData[plotlineData.length - 1].trend || "NEUTRAL"
+          ).toUpperCase();
           const color =
             trendUpper === "BUY"
               ? colors.buySignal
@@ -478,7 +544,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Enhanced decision signals with professional triangle indicators
     const createDecisionSignals = useCallback(
       (chartData: ChartData[]) => {
-        if (!chartRef.current || !showDecisionSignals || !chartContainerRef.current) return;
+        if (
+          !chartRef.current ||
+          !showDecisionSignals ||
+          !chartContainerRef.current
+        )
+          return;
 
         // Clear existing decision signals
         decisionSignalsRef.current.forEach((series) => {
@@ -504,8 +575,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         if (decisionSignals.length === 0) return;
 
         // Group signals by type for better visualization
-        const buySignals = decisionSignals.filter((signal) => signal.shape === "triangleUp");
-        const sellSignals = decisionSignals.filter((signal) => signal.shape === "triangleDown");
+        const buySignals = decisionSignals.filter(
+          (signal) => signal.shape === "triangleUp"
+        );
+        const sellSignals = decisionSignals.filter(
+          (signal) => signal.shape === "triangleDown"
+        );
 
         // Create buy signal series (triangle up)
         if (buySignals.length > 0) {
@@ -521,7 +596,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
             const buyData = buySignals.map((signal) => ({
               time: signal.time as UTCTimestamp,
-              value: signal.price + (signal.price * 0.003),
+              value: signal.price + signal.price * 0.003,
             }));
 
             buySeries.setData(buyData);
@@ -545,7 +620,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
             const sellData = sellSignals.map((signal) => ({
               time: signal.time as UTCTimestamp,
-              value: signal.price - (signal.price * 0.003),
+              value: signal.price - signal.price * 0.003,
             }));
 
             sellSeries.setData(sellData);
@@ -635,26 +710,32 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       chartRef.current = createChart(chartContainerRef.current, chartOptions);
 
       // Create candlestick series for right scale
-      candlestickSeriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
-        upColor: colors.upColor,
-        downColor: colors.downColor,
-        borderVisible: false,
-        wickUpColor: colors.upColor,
-        wickDownColor: colors.downColor,
-        title: "Price (Right)",
-      });
-
-      // Create candlestick series for left scale (if enabled)
-      if (enableTwoScale) {
-        candlestickLeftSeriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
-          priceScaleId: "left",
+      candlestickSeriesRef.current = chartRef.current.addSeries(
+        CandlestickSeries,
+        {
           upColor: colors.upColor,
           downColor: colors.downColor,
           borderVisible: false,
           wickUpColor: colors.upColor,
           wickDownColor: colors.downColor,
-          title: "Price (Left)",
-        });
+          title: "Price (Right)",
+        }
+      );
+
+      // Create candlestick series for left scale (if enabled)
+      if (enableTwoScale) {
+        candlestickLeftSeriesRef.current = chartRef.current.addSeries(
+          CandlestickSeries,
+          {
+            priceScaleId: "left",
+            upColor: colors.upColor,
+            downColor: colors.downColor,
+            borderVisible: false,
+            wickUpColor: colors.upColor,
+            wickDownColor: colors.downColor,
+            title: "Price (Left)",
+          }
+        );
       }
 
       // Create volume series if enabled
@@ -785,14 +866,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Enhanced data loading with proper error handling and state management
     const loadData = useCallback(async () => {
       try {
-        setChartState(prev => ({ ...prev, isLoading: true, error: null }));
+        setChartState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         const chartData = await loadRkbData();
         if (chartData.length === 0) {
-          setChartState(prev => ({ 
-            ...prev, 
-            isLoading: false, 
-            error: "No data available" 
+          setChartState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: "No data available",
           }));
           return;
         }
@@ -875,11 +956,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           const latest = chartData[chartData.length - 1];
           const previous = chartData[chartData.length - 2];
 
-          setChartState(prev => ({
+          setChartState((prev) => ({
             ...prev,
             currentPrice: latest.close,
             priceChange: latest.close - previous.close,
-            priceChangePercent: ((latest.close - previous.close) / previous.close) * 100,
+            priceChangePercent:
+              ((latest.close - previous.close) / previous.close) * 100,
             currentTrend: latest.trend || null,
             currentDecision: latest.decision || null,
             lastUpdate: new Date(),
@@ -891,13 +973,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           chartRef.current.timeScale().fitContent();
         }
 
-        setChartState(prev => ({ ...prev, isLoading: false }));
+        setChartState((prev) => ({ ...prev, isLoading: false }));
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load chart data";
-        setChartState(prev => ({ 
-          ...prev, 
-          isLoading: false, 
-          error: errorMessage 
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load chart data";
+        setChartState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: errorMessage,
         }));
       }
     }, [
@@ -980,6 +1063,50 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       return () => clearInterval(interval);
     }, [autoRefresh, refreshInterval, loadData]);
 
+    // Handle showDecisionSignals prop changes - toggle decision signals visibility
+    useEffect(() => {
+      if (!chartRef.current || !currentChartData.current.length) return;
+
+      // Clear existing decision signals
+      decisionSignalsRef.current.forEach((series) => {
+        try {
+          if (chartRef.current && series) {
+            chartRef.current.removeSeries(series);
+          }
+        } catch (error) {
+          console.warn("Error removing decision signal:", error);
+        }
+      });
+      decisionSignalsRef.current = [];
+
+      // Recreate decision signals if enabled
+      if (showDecisionSignals) {
+        createDecisionSignals(currentChartData.current);
+      }
+    }, [showDecisionSignals, createDecisionSignals]);
+
+    // Handle showPlotline prop changes - toggle plotline segments visibility
+    useEffect(() => {
+      if (!chartRef.current || !currentChartData.current.length) return;
+
+      // Clear existing plotline segments
+      plotlineSegmentsRef.current.forEach((series) => {
+        try {
+          if (chartRef.current && series) {
+            chartRef.current.removeSeries(series);
+          }
+        } catch (error) {
+          console.warn("Error removing plotline segment:", error);
+        }
+      });
+      plotlineSegmentsRef.current = [];
+
+      // Recreate plotline segments if enabled
+      if (showPlotline) {
+        createColoredPlotlineSegments(currentChartData.current);
+      }
+    }, [showPlotline, createColoredPlotlineSegments]);
+
     return (
       <div className={`relative ${className}`}>
         {/* Professional loading overlay */}
@@ -988,8 +1115,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             <div className="flex items-center space-x-3 text-white">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">Loading chart data...</span>
-                <span className="text-xs text-gray-300">Fetching latest market data</span>
+                <span className="text-sm font-medium">
+                  Loading chart data...
+                </span>
+                <span className="text-xs text-gray-300">
+                  Fetching latest market data
+                </span>
               </div>
             </div>
           </div>
@@ -1000,8 +1131,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           <div className="absolute inset-0 bg-red-500/10 flex items-center justify-center z-10">
             <div className="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg">
               <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <span className="font-medium">Error</span>
               </div>
@@ -1012,7 +1151,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         {/* Professional status indicators */}
         <div className="absolute top-4 left-4 z-20 space-y-2">
-
           {/* Current Price Indicator */}
           {chartState.currentPrice && (
             <div
@@ -1026,12 +1164,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 ₹{chartState.currentPrice.toLocaleString()}
               </div>
               {chartState.priceChange && (
-                <div className={`text-xs ${
-                  chartState.priceChange >= 0 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {chartState.priceChange >= 0 ? '+' : ''}
-                  {chartState.priceChange.toFixed(2)} 
-                  ({chartState.priceChangePercent?.toFixed(2)}%)
+                <div
+                  className={`text-xs ${
+                    chartState.priceChange >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {chartState.priceChange >= 0 ? "+" : ""}
+                  {chartState.priceChange.toFixed(2)}(
+                  {chartState.priceChangePercent?.toFixed(2)}%)
                 </div>
               )}
             </div>
@@ -1047,10 +1189,15 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               }`}
             >
               <div className="text-sm font-medium font-urbanist">Trend</div>
-              <div className={`text-xs font-urbanist ${
-                chartState.currentTrend === 'BUY' ? 'text-green-400' : 
-                chartState.currentTrend === 'SELL' ? 'text-red-400' : 'text-yellow-400'
-              }`}>
+              <div
+                className={`text-xs font-urbanist ${
+                  chartState.currentTrend === "BUY"
+                    ? "text-green-400"
+                    : chartState.currentTrend === "SELL"
+                    ? "text-red-400"
+                    : "text-yellow-400"
+                }`}
+              >
                 {chartState.currentTrend}
               </div>
             </div>
