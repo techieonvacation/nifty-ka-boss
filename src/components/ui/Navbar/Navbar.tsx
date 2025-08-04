@@ -120,7 +120,7 @@ export default function Navbar() {
               />
             ) : (
               <>
-                <Link href="/auth/login" passHref>
+                <Link href="/nifty-ka-boss" passHref>
                   <Button
                     variant="primary"
                     size="md"
@@ -130,7 +130,7 @@ export default function Navbar() {
                     Nifty Ka Boss
                   </Button>
                 </Link>
-                <Link href="/auth/signup" passHref>
+                <Link href="/nifty-ka-boss" passHref>
                   <Button
                     variant="primary"
                     size="sm"
