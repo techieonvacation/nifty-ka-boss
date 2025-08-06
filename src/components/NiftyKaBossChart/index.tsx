@@ -138,13 +138,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     },
   ]);
 
-  // Technical indicators data
-  const [technicalIndicators] = useState({
-    rsi: 50.55,
-    macd: -13.42,
-    ma20: 24773.77,
-    ma50: 24935.84,
-    ma200: 25210.55,
+  // Technical indicators data - will be updated from API response
+  const [technicalIndicators, setTechnicalIndicators] = useState({
+    atr: 0,
+    S1: 0,
+    R1: 0,
   });
 
   // Chart ref for accessing chart methods
@@ -194,6 +192,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             low: latest.low,
             close: latest.close,
             volume: latest.volume,
+          });
+        }
+
+        // Extract technical indicators from API response
+        if (data && data.length > 0) {
+          const latestData = data[data.length - 1];
+          setTechnicalIndicators({
+            atr: latestData.atr || 0,
+            S1: latestData.S1 || 0,
+            R1: latestData.R1 || 0,
           });
         }
       } catch (error) {

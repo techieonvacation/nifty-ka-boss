@@ -81,6 +81,16 @@ interface ChartState {
   lastUpdate: Date | null;
 }
 
+// OHLC hover data interface
+interface OHLCData {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
 export interface StockChartRef {
   chartRef: React.RefObject<HTMLDivElement>;
   chart: IChartApi | null;
@@ -185,6 +195,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       currentDecision: null,
       lastUpdate: null,
     });
+
+    // OHLC hover state for displaying candle data on hover
+    const [hoveredOHLC, setHoveredOHLC] = useState<OHLCData | null>(null);
 
     // Memoized color scheme for performance
     const colors = useMemo(() => THEME_COLORS[theme], [theme]);
@@ -843,6 +856,45 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // Add resize listener
       window.addEventListener("resize", handleResize);
 
+      // Add crosshair event listener for OHLC hover display
+      if (chartRef.current) {
+        chartRef.current.subscribeCrosshairMove((param) => {
+          if (param.time && param.seriesData) {
+            // Get the candlestick data for the hovered time
+            const candlestickData = param.seriesData.get(candlestickSeriesRef.current!);
+            if (candlestickData && 'open' in candlestickData) {
+              const { open, high, low, close } = candlestickData as {
+                open: number;
+                high: number;
+                low: number;
+                close: number;
+              };
+              
+              // Get volume data if available
+              let volume: number | undefined;
+              if (volumeSeriesRef.current) {
+                const volumeData = param.seriesData.get(volumeSeriesRef.current);
+                if (volumeData && 'value' in volumeData) {
+                  volume = (volumeData as { value: number }).value;
+                }
+              }
+              
+              setHoveredOHLC({
+                time: new Date((param.time as number) * 1000).toLocaleDateString(),
+                open,
+                high,
+                low,
+                close,
+                volume,
+              });
+            }
+          } else {
+            // Clear OHLC data when not hovering over a candle
+            setHoveredOHLC(null);
+          }
+        });
+      }
+
       return () => {
         window.removeEventListener("resize", handleResize);
         if (resizeTimeoutRef.current) {
@@ -1151,6 +1203,42 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         {/* Professional status indicators */}
         <div className="absolute top-4 left-4 z-20 space-y-2">
+          {/* OHLC Data Display on Hover */}
+          {hoveredOHLC && (
+            <div
+              className={`px-3 py-2 rounded-lg shadow-lg font-urbanist ${
+                theme === "dark"
+                  ? "bg-gray-800/90 text-white border border-gray-600"
+                  : "bg-white/90 text-gray-900 border border-gray-200"
+              }`}
+            >
+              <div className="text-xs font-medium mb-1">OHLC Data</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="text-gray-400">Date:</div>
+                <div className="text-white">{hoveredOHLC.time}</div>
+                
+                <div className="text-gray-400">Open:</div>
+                <div className="text-white">₹{hoveredOHLC.open.toFixed(2)}</div>
+                
+                <div className="text-gray-400">High:</div>
+                <div className="text-green-400">₹{hoveredOHLC.high.toFixed(2)}</div>
+                
+                <div className="text-gray-400">Low:</div>
+                <div className="text-red-400">₹{hoveredOHLC.low.toFixed(2)}</div>
+                
+                <div className="text-gray-400">Close:</div>
+                <div className="text-white">₹{hoveredOHLC.close.toFixed(2)}</div>
+                
+                {hoveredOHLC.volume && (
+                  <>
+                    <div className="text-gray-400">Volume:</div>
+                    <div className="text-blue-400">{hoveredOHLC.volume.toLocaleString()}</div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Current Price Indicator */}
           {chartState.currentPrice && (
             <div

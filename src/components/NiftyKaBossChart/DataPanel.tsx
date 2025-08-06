@@ -37,11 +37,9 @@ interface DataPanelProps {
     returns?: "Profit" | "Loss";
   }>;
   technicalIndicators: {
-    rsi: number;
-    macd: number;
-    ma20: number;
-    ma50: number;
-    ma200: number;
+    atr: number;
+    S1: number;
+    R1: number;
   };
 }
 
@@ -165,10 +163,6 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <Clock size={12} />
                 <span>Last update: {lastUpdate}</span>
               </div>
-              <div className="flex items-center space-x-2 text-yellow-500">
-                <AlertTriangle size={12} />
-                <span className="text-xs">Delayed by 5 minutes</span>
-              </div>
             </div>
           </div>
         </div>
@@ -275,33 +269,21 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <div>Values</div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">RSI (14)</div>
+                <div className="text-gray-300">ATR</div>
+                <div className="text-white">
+                  {technicalIndicators.atr.toFixed(2)}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="text-gray-300">S1</div>
                 <div className="text-red-500">
-                  {technicalIndicators.rsi.toFixed(2)}%
+                  {technicalIndicators.S1.toFixed(2)}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">MACD</div>
-                <div className="text-red-500">
-                  {technicalIndicators.macd.toFixed(2)}%
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">MA (20)</div>
-                <div className="text-white">
-                  {technicalIndicators.ma20.toFixed(2)}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">MA (50)</div>
-                <div className="text-white">
-                  {technicalIndicators.ma50.toFixed(2)}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">MA (200)</div>
-                <div className="text-white">
-                  {technicalIndicators.ma200.toFixed(2)}
+                <div className="text-gray-300">R1</div>
+                <div className="text-green-500">
+                  {technicalIndicators.R1.toFixed(2)}
                 </div>
               </div>
             </div>
