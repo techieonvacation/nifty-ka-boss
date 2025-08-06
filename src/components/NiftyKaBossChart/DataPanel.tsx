@@ -4,8 +4,22 @@ import {
   ArrowUp,
   ArrowDown,
   BarChart3,
+  Eye,
+  Loader2,
 } from "lucide-react";
-import { fetchNiftyMovements, type NiftyMovementData } from "@/lib/api/rkb";
+import {
+  fetchNiftyMovements,
+  type NiftyMovementData,
+  fetchDecisions,
+  type DecisionData,
+} from "@/lib/api/rkb";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/Dialog";
 
 interface DataPanelProps {
   theme: boolean;
@@ -63,7 +77,13 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch nifty movement data
+  // New state for all decisions popup with proper state management
+  const [allDecisions, setAllDecisions] = useState<DecisionData[]>([]);
+  const [loadingAllDecisions, setLoadingAllDecisions] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [hasLoadedDecisions, setHasLoadedDecisions] = useState(false);
+
+  // Fetch nifty movement data with optimized loading
   useEffect(() => {
     const fetchNiftyMovementsData = async () => {
       try {
@@ -94,15 +114,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
       } catch (err) {
         console.error("Error fetching nifty movements:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch data");
-
-        // Fallback to default data if API fails
-        setDailyMovements([
-          { date: "29 Jul 2025", change: -14.15, changePercent: -0.06 },
-          { date: "28 Jul 2025", change: -170.6, changePercent: -0.69 },
-          { date: "25 Jul 2025", change: -12.35, changePercent: -0.05 },
-          { date: "24 Jul 2025", change: 207.35, changePercent: 0.83 },
-          { date: "23 Jul 2025", change: 364.65, changePercent: 1.47 },
-        ]);
+        // Don't set fallback data - keep loading state
       } finally {
         setLoading(false);
       }
@@ -110,6 +122,67 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
     fetchNiftyMovementsData();
   }, []);
+
+  // Function to fetch all decisions for the popup - optimized to prevent unnecessary fetches
+  const fetchAllDecisions = async () => {
+    // Only fetch if we haven't loaded decisions yet or if there's an error
+    if (hasLoadedDecisions && allDecisions.length > 0 && !error) {
+      return;
+    }
+
+    try {
+      setLoadingAllDecisions(true);
+      setError(null);
+      const decisions = await fetchDecisions();
+      setAllDecisions(decisions);
+      setHasLoadedDecisions(true);
+    } catch (err) {
+      console.error("Error fetching all decisions:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch all decisions"
+      );
+    } finally {
+      setLoadingAllDecisions(false);
+    }
+  };
+
+  // Function to handle dialog open - triggers data fetch only when needed
+  const handleDialogOpen = async (open: boolean) => {
+    setDialogOpen(open);
+    if (open && !hasLoadedDecisions) {
+      await fetchAllDecisions();
+    }
+  };
+
+  // Function to format decision data for display
+  const formatDecisionForDisplay = (decision: DecisionData) => {
+    // Extract date and time from datetime
+    const dateTime = new Date(decision.datetime);
+    const date = dateTime.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const time = dateTime.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    return {
+      date,
+      time,
+      decision: decision.decision as "BUY" | "SELL",
+      price: decision.close_x,
+      has: decision.HighAfterSignal,
+      las: decision.LowAfterSignal,
+      favMoves: decision.FavourableMove,
+      favMovesPercent: decision["Favourable%"],
+      hDate: decision.HighDate,
+      lDate: decision.LowDate,
+      returns: decision.returns as "Profit" | "Loss",
+    };
+  };
 
   return (
     <div
@@ -218,10 +291,17 @@ const DataPanel: React.FC<DataPanelProps> = ({
               Last 5 Days Movements
             </h3>
             {loading ? (
-              <div className="text-sm text-gray-400">Loading movements...</div>
+              <div className="flex items-center justify-center py-4 space-x-2">
+                <Loader2 className="animate-spin text-blue-500" size={16} />
+                <span className="text-sm text-gray-400">
+                  Loading movements...
+                </span>
+              </div>
             ) : error ? (
-              <div className="text-sm text-red-400">Error: {error}</div>
-            ) : (
+              <div className="flex items-center justify-center py-4 space-x-2">
+                <div className="text-sm text-red-400">Error: {error}</div>
+              </div>
+            ) : dailyMovements.length > 0 ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-[40%_60%] gap-2 text-xs font-medium text-gray-400">
                   <div>Days</div>
@@ -253,6 +333,12 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-4">
+                <span className="text-sm text-gray-400">
+                  No movement data available
+                </span>
               </div>
             )}
           </div>
@@ -291,106 +377,268 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
         {/* Last 5 Decisions Panel */}
         <div className="space-y-4">
-          <h3 className="text-base font-bold text-white">Last 5 Decisions</h3>
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-            {/* Data source info */}
-            <div className="text-sm text-gray-500 p-3 border-b border-gray-700 bg-gray-900">
-              Showing {lastDecisions.length} decisions from API
-            </div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-white">Last 5 Decisions</h3>
+            <Dialog open={dialogOpen} onOpenChange={handleDialogOpen}>
+              <DialogTrigger asChild>
+                <button className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl">
+                  <Eye size={14} />
+                  <span>See More</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] max-h-[90vh] w-full bg-gray-900 border-gray-700 text-white transition-all duration-300 ease-in-out">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-white flex items-center space-x-2">
+                    <BarChart3 size={20} />
+                    <span>All Trading Decisions</span>
+                  </DialogTitle>
+                </DialogHeader>
 
-            {/* Scrollable Container */}
-            <div className="overflow-x-auto max-h-96">
-              <div className="min-w-[800px]">
-                {/* Table Header */}
-                <div className="grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold text-gray-300 border-b border-gray-700 bg-gray-900 sticky top-0">
-                  <div className="min-w-[80px]">Date</div>
-                  <div className="min-w-[70px]">Decision</div>
-                  <div className="min-w-[80px]">Price</div>
-                  <div className="min-w-[70px]">HAS</div>
-                  <div className="min-w-[70px]">LAS</div>
-                  <div className="min-w-[100px]">Fav. Moves</div>
-                  <div className="min-w-[80px]">H. Date</div>
-                  <div className="min-w-[80px]">L. Date</div>
-                  <div className="min-w-[70px]">Returns</div>
-                </div>
-
-                {/* Table Rows */}
-                <div className="divide-y divide-gray-700">
-                  {lastDecisions.map((decision, index) => (
-                    <div
-                      key={index}
-                      className="grid grid-cols-9 gap-2 px-2 py-2 text-sm hover:bg-gray-700 transition-colors duration-200"
-                    >
-                      <div className="min-w-[80px]">
-                        <div className="text-white font-medium text-xs">
-                          {decision.date}
-                        </div>
-                        <div className="text-gray-400 text-xs">
-                          {decision.time}
-                        </div>
-                      </div>
-                      <div className="min-w-[70px] flex items-center">
-                        <span
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                            decision.decision === "BUY"
-                              ? "bg-green-600 text-white shadow-lg"
-                              : "bg-red-600 text-white shadow-lg"
-                          }`}
-                        >
-                          {decision.decision}
-                        </span>
-                      </div>
-                      <div className="min-w-[80px] text-white font-medium text-xs ">
-                        {decision.price.toFixed(2)}
-                      </div>
-                      <div className="min-w-[70px] text-white text-xs">
-                        {decision.has.toFixed(2)}
-                      </div>
-                      <div className="min-w-[70px] text-white text-xs">
-                        {decision.las.toFixed(2)}
-                      </div>
-                      <div className="min-w-[100px]">
-                        <div className="text-white font-medium text-xs">
-                          {decision.favMoves >= 0 ? "+" : ""}
-                          {decision.favMoves.toFixed(2)}
-                        </div>
-                        <div className="text-gray-400 text-xs">
-                          ({decision.favMovesPercent.toFixed(2)}%)
-                        </div>
-                      </div>
-                      <div className="min-w-[80px]">
-                        <div className="text-gray-300 text-xs">
-                          {decision.hDate || "24 Jul 2025"}
-                        </div>
-                        <div className="text-gray-500 text-xs">
-                          {decision.time}
-                        </div>
-                      </div>
-                      <div className="min-w-[80px]">
-                        <div className="text-gray-300">
-                          {decision.lDate || "29 Jul 2025"}
-                        </div>
-                        <div className="text-gray-500 text-xs">09:15</div>
-                      </div>
-                      <div className="min-w-[70px] flex items-center">
-                        <span
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                            decision.returns === "Profit" ||
-                            decision.favMoves > 0
-                              ? "bg-green-600 text-white shadow-lg"
-                              : "bg-red-600 text-white shadow-lg"
-                          }`}
-                        >
-                          {decision.returns ||
-                            (decision.favMoves > 0 ? "Profit" : "Loss")}
-                        </span>
+                <div className="mt-4 transition-all duration-300 ease-in-out">
+                  {loadingAllDecisions ? (
+                    <div className="flex items-center justify-center py-8 space-x-2">
+                      <Loader2
+                        className="animate-spin text-blue-500"
+                        size={20}
+                      />
+                      <div className="text-gray-400">
+                        Loading all decisions...
                       </div>
                     </div>
-                  ))}
+                  ) : error ? (
+                    <div className="text-red-400 text-center py-8">{error}</div>
+                  ) : allDecisions.length > 0 ? (
+                    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden transition-all duration-300 ease-in-out">
+                      {/* Data source info */}
+                      <div className="text-sm text-gray-500 p-3 border-b border-gray-700 bg-gray-900">
+                        Showing {allDecisions.length} decisions from API
+                      </div>
+
+                      {/* Scrollable Container */}
+                      <div className="overflow-x-auto max-h-[70vh] transition-all duration-300 ease-in-out">
+                        <div className="min-w-[800px]">
+                          {/* Table Header */}
+                          <div className="grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold text-gray-300 border-b border-gray-700 bg-gray-900 sticky top-0">
+                            <div className="min-w-[80px]">Date</div>
+                            <div className="min-w-[70px]">Decision</div>
+                            <div className="min-w-[80px]">Price</div>
+                            <div className="min-w-[70px]">HAS</div>
+                            <div className="min-w-[70px]">LAS</div>
+                            <div className="min-w-[100px]">Fav. Moves</div>
+                            <div className="min-w-[80px]">H. Date</div>
+                            <div className="min-w-[80px]">L. Date</div>
+                            <div className="min-w-[70px]">Returns</div>
+                          </div>
+
+                          {/* Table Rows */}
+                          <div className="divide-y divide-gray-700">
+                            {allDecisions.map((decision, index) => {
+                              const formattedDecision =
+                                formatDecisionForDisplay(decision);
+                              return (
+                                <div
+                                  key={`${decision.datetime}-${index}`}
+                                  className="grid grid-cols-9 gap-2 px-2 py-2 text-sm hover:bg-gray-700 transition-all duration-200 ease-in-out"
+                                >
+                                  <div className="min-w-[80px]">
+                                    <div className="text-white font-medium text-xs">
+                                      {formattedDecision.date}
+                                    </div>
+                                    <div className="text-gray-400 text-xs">
+                                      {formattedDecision.time}
+                                    </div>
+                                  </div>
+                                  <div className="min-w-[70px] flex items-center">
+                                    <span
+                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                        formattedDecision.decision === "BUY"
+                                          ? "bg-green-600 text-white shadow-lg"
+                                          : "bg-red-600 text-white shadow-lg"
+                                      }`}
+                                    >
+                                      {formattedDecision.decision}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-[80px] text-white font-medium text-xs">
+                                    {formattedDecision.price.toFixed(2)}
+                                  </div>
+                                  <div className="min-w-[70px] text-white text-xs">
+                                    {formattedDecision.has.toFixed(2)}
+                                  </div>
+                                  <div className="min-w-[70px] text-white text-xs">
+                                    {formattedDecision.las.toFixed(2)}
+                                  </div>
+                                  <div className="min-w-[100px]">
+                                    <div className="text-white font-medium text-xs">
+                                      {formattedDecision.favMoves >= 0
+                                        ? "+"
+                                        : ""}
+                                      {formattedDecision.favMoves.toFixed(2)}
+                                    </div>
+                                    <div className="text-gray-400 text-xs">
+                                      (
+                                      {formattedDecision.favMovesPercent.toFixed(
+                                        2
+                                      )}
+                                      %)
+                                    </div>
+                                  </div>
+                                  <div className="min-w-[80px]">
+                                    <div className="text-gray-300 text-xs">
+                                      {formattedDecision.hDate || "N/A"}
+                                    </div>
+                                    <div className="text-gray-500 text-xs">
+                                      {formattedDecision.time}
+                                    </div>
+                                  </div>
+                                  <div className="min-w-[80px]">
+                                    <div className="text-gray-300 text-xs">
+                                      {formattedDecision.lDate || "N/A"}
+                                    </div>
+                                    <div className="text-gray-500 text-xs">
+                                      09:15
+                                    </div>
+                                  </div>
+                                  <div className="min-w-[70px] flex items-center">
+                                    <span
+                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                        formattedDecision.returns ===
+                                          "Profit" ||
+                                        formattedDecision.favMoves > 0
+                                          ? "bg-green-600 text-white shadow-lg"
+                                          : "bg-red-600 text-white shadow-lg"
+                                      }`}
+                                    >
+                                      {formattedDecision.returns}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-8">
+                      <span className="text-gray-400">
+                        No decisions available
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Show real decisions data only */}
+          {lastDecisions.length > 0 ? (
+            <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+              {/* Data source info */}
+              <div className="text-sm text-gray-500 p-3 border-b border-gray-700 bg-gray-900">
+                Showing {lastDecisions.length} decisions from API
+              </div>
+
+              {/* Scrollable Container */}
+              <div className="overflow-x-auto max-h-96">
+                <div className="min-w-[800px]">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold text-gray-300 border-b border-gray-700 bg-gray-900 sticky top-0">
+                    <div className="min-w-[80px]">Date</div>
+                    <div className="min-w-[70px]">Decision</div>
+                    <div className="min-w-[80px]">Price</div>
+                    <div className="min-w-[70px]">HAS</div>
+                    <div className="min-w-[70px]">LAS</div>
+                    <div className="min-w-[100px]">Fav. Moves</div>
+                    <div className="min-w-[80px]">H. Date</div>
+                    <div className="min-w-[80px]">L. Date</div>
+                    <div className="min-w-[70px]">Returns</div>
+                  </div>
+
+                  {/* Table Rows */}
+                  <div className="divide-y divide-gray-700">
+                    {lastDecisions.map((decision, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-9 gap-2 px-2 py-2 text-sm hover:bg-gray-700 transition-colors duration-200"
+                      >
+                        <div className="min-w-[80px]">
+                          <div className="text-white font-medium text-xs">
+                            {decision.date}
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            {decision.time}
+                          </div>
+                        </div>
+                        <div className="min-w-[70px] flex items-center">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                              decision.decision === "BUY"
+                                ? "bg-green-600 text-white shadow-lg"
+                                : "bg-red-600 text-white shadow-lg"
+                            }`}
+                          >
+                            {decision.decision}
+                          </span>
+                        </div>
+                        <div className="min-w-[80px] text-white font-medium text-xs ">
+                          {decision.price.toFixed(2)}
+                        </div>
+                        <div className="min-w-[70px] text-white text-xs">
+                          {decision.has.toFixed(2)}
+                        </div>
+                        <div className="min-w-[70px] text-white text-xs">
+                          {decision.las.toFixed(2)}
+                        </div>
+                        <div className="min-w-[100px]">
+                          <div className="text-white font-medium text-xs">
+                            {decision.favMoves >= 0 ? "+" : ""}
+                            {decision.favMoves.toFixed(2)}
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            ({decision.favMovesPercent.toFixed(2)}%)
+                          </div>
+                        </div>
+                        <div className="min-w-[80px]">
+                          <div className="text-gray-300 text-xs">
+                            {decision.hDate || "N/A"}
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            {decision.time}
+                          </div>
+                        </div>
+                        <div className="min-w-[80px]">
+                          <div className="text-gray-300 text-xs">
+                            {decision.lDate || "N/A"}
+                          </div>
+                          <div className="text-gray-500 text-xs">09:15</div>
+                        </div>
+                        <div className="min-w-[70px] flex items-center">
+                          <span
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                              decision.returns === "Profit" ||
+                              decision.favMoves > 0
+                                ? "bg-green-600 text-white shadow-lg"
+                                : "bg-red-600 text-white shadow-lg"
+                            }`}
+                          >
+                            {decision.returns}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+              <div className="flex items-center justify-center py-8 space-x-2">
+                <Loader2 className="animate-spin text-blue-500" size={16} />
+                <span className="text-gray-400">Loading decisions...</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

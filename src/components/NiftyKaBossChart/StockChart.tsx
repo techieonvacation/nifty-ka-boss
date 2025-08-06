@@ -125,8 +125,8 @@ const THEME_COLORS = {
     macd: "#3b82f6",
     signal: "#ef4444",
     plotline: "#ff6b35",
-    buySignal: "#00ff88",
-    sellSignal: "#ff4757",
+    buySignal: "#006400",
+    sellSignal: "#E75480",
   },
   light: {
     background: "#ffffff",
@@ -142,8 +142,8 @@ const THEME_COLORS = {
     macd: "#3b82f6",
     signal: "#ef4444",
     plotline: "#ff6b35",
-    buySignal: "#00ff88",
-    sellSignal: "#ff4757",
+    buySignal: "#006400",
+    sellSignal: "#E75480",
   },
 } as const;
 

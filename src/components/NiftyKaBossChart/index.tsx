@@ -95,49 +95,6 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   >([]);
   const [, setIsLoadingDecisions] = useState(false);
 
-  // Sample data for the data panel (fallback)
-  const [lastDecisions] = useState([
-    {
-      date: "24 Jul 2025",
-      time: "11:15",
-      decision: "SELL" as const,
-      price: 25049.45,
-      has: 25148.7,
-      las: 24598.6,
-      favMoves: 450.85,
-      favMovesPercent: 1.8,
-      hDate: "24 Jul 2025",
-      lDate: "29 Jul 2025",
-      returns: "Profit" as const,
-    },
-    {
-      date: "23 Jul 2025",
-      time: "14:15",
-      decision: "BUY" as const,
-      price: 25229.35,
-      has: 25246.25,
-      las: 25146.85,
-      favMoves: 16.9,
-      favMovesPercent: 0.07,
-      hDate: "24 Jul 2025",
-      lDate: "24 Jul 2025",
-      returns: "Loss" as const,
-    },
-    {
-      date: "10 Jul 2025",
-      time: "11:15",
-      decision: "SELL" as const,
-      price: 25368.7,
-      has: 25431.05,
-      las: 24882.3,
-      favMoves: 486.4,
-      favMovesPercent: 1.92,
-      hDate: "10 Jul 2025",
-      lDate: "21 Jul 2025",
-      returns: "Profit" as const,
-    },
-  ]);
-
   // Technical indicators data - will be updated from API response
   const [technicalIndicators, setTechnicalIndicators] = useState({
     atr: 0,
@@ -172,7 +129,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     handleScreenshot();
   }, [handleScreenshot]);
 
-  // Load RKB data on component mount
+  // Load RKB data on component mount with optimized fetching
   useEffect(() => {
     const loadRkbData = async () => {
       try {
@@ -213,6 +170,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         }
       } catch (error) {
         console.error("Error loading RKB data:", error);
+        // Don't set fallback data - keep loading state
       } finally {
         setIsLoadingRkbData(false);
       }
@@ -221,7 +179,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     loadRkbData();
   }, []);
 
-  // Load decisions data on component mount
+  // Load decisions data on component mount with optimized fetching
   useEffect(() => {
     const loadDecisionsData = async () => {
       try {
@@ -305,9 +263,9 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
         setRealDecisions(transformedDecisions);
         console.log("Loaded real decisions data:", transformedDecisions);
-      } catch {
-        console.error("Error loading decisions data");
-        // Keep using fallback data if API fails
+      } catch (error) {
+        console.error("Error loading decisions data:", error);
+        // Don't set fallback data - keep loading state
       } finally {
         setIsLoadingDecisions(false);
       }
@@ -469,9 +427,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
                   priceChangePercent={priceChangePercent}
                   lastUpdate={<ClientTimeDisplay />}
                   ohlcData={currentCandleData}
-                  lastDecisions={
-                    realDecisions.length > 0 ? realDecisions : lastDecisions
-                  }
+                  lastDecisions={realDecisions.length > 0 ? realDecisions : []}
                   technicalIndicators={technicalIndicators}
                 />
               </div>
@@ -490,9 +446,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
               priceChangePercent={priceChangePercent}
               lastUpdate={<ClientTimeDisplay />}
               ohlcData={currentCandleData}
-              lastDecisions={
-                realDecisions.length > 0 ? realDecisions : lastDecisions
-              }
+              lastDecisions={realDecisions}
               technicalIndicators={technicalIndicators}
             />
           </div>
