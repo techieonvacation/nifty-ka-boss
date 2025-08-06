@@ -97,6 +97,8 @@ export interface StockChartRef {
   refresh: () => Promise<void>;
   getCurrentData: () => ChartData[];
   takeScreenshot: () => Promise<void>;
+  resetZoom: () => void;
+  setZoomLevel: (level: number) => void;
 }
 
 // Performance optimization constants
@@ -214,8 +216,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       try {
         // Dynamically import html2canvas for optimal bundle size
-        const html2canvas = (await import('html2canvas')).default;
-        
+        const html2canvas = (await import("html2canvas")).default;
+
         // Capture only the main chart area (excluding data panel and header)
         const canvas = await html2canvas(chartContainerRef.current, {
           backgroundColor: colors.background, // Match chart theme
@@ -228,22 +230,30 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         });
 
         // Convert canvas to blob and trigger automatic download
-        canvas.toBlob((blob) => {
-          if (blob) {
-            // Create download link with timestamped filename
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${symbol || 'NIFTY'}_${exchange || 'NSE'}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
-            
-            // Trigger download and cleanup
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url); // Free memory
-          }
-        }, 'image/png', 0.95); // High quality PNG format
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              // Create download link with timestamped filename
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${symbol || "NIFTY"}_${
+                exchange || "NSE"
+              }_${new Date()
+                .toISOString()
+                .slice(0, 19)
+                .replace(/:/g, "-")}.png`;
 
+              // Trigger download and cleanup
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url); // Free memory
+            }
+          },
+          "image/png",
+          0.95
+        ); // High quality PNG format
       } catch (error) {
         console.error("Error taking screenshot:", error);
       }
@@ -256,6 +266,37 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       refresh: loadData,
       getCurrentData: () => currentChartData.current,
       takeScreenshot: takeChartScreenshot, // Add screenshot functionality
+      resetZoom: () => {
+        if (chartRef.current && currentChartData.current.length > 0) {
+          // Set a reasonable default zoom level (show last 50 bars)
+          const timeScale = chartRef.current.timeScale();
+          const lastTime =
+            currentChartData.current[currentChartData.current.length - 1].time;
+          const startIndex = Math.max(0, currentChartData.current.length - 50);
+          const startTime = currentChartData.current[startIndex].time;
+
+          try {
+            timeScale.setVisibleRange({
+              from: startTime,
+              to: lastTime,
+            });
+          } catch (error) {
+            console.warn("Error setting zoom level:", error);
+            // Fallback to fit content if setVisibleRange fails
+            timeScale.fitContent();
+          }
+        }
+      },
+      setZoomLevel: (level: number) => {
+        if (chartRef.current) {
+          // Set bar spacing to control zoom level
+          chartRef.current.applyOptions({
+            timeScale: {
+              barSpacing: level,
+            },
+          });
+        }
+      },
     }));
 
     // Debounced resize handler for smooth performance
@@ -702,7 +743,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           timeVisible: true,
           secondsVisible: false,
           rightOffset: 12,
-          barSpacing: 6,
+          barSpacing: 12, // Increased bar spacing for better zoom-in by default
         },
         handleScroll: {
           mouseWheel: true,
@@ -861,26 +902,32 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         chartRef.current.subscribeCrosshairMove((param) => {
           if (param.time && param.seriesData) {
             // Get the candlestick data for the hovered time
-            const candlestickData = param.seriesData.get(candlestickSeriesRef.current!);
-            if (candlestickData && 'open' in candlestickData) {
+            const candlestickData = param.seriesData.get(
+              candlestickSeriesRef.current!
+            );
+            if (candlestickData && "open" in candlestickData) {
               const { open, high, low, close } = candlestickData as {
                 open: number;
                 high: number;
                 low: number;
                 close: number;
               };
-              
+
               // Get volume data if available
               let volume: number | undefined;
               if (volumeSeriesRef.current) {
-                const volumeData = param.seriesData.get(volumeSeriesRef.current);
-                if (volumeData && 'value' in volumeData) {
+                const volumeData = param.seriesData.get(
+                  volumeSeriesRef.current
+                );
+                if (volumeData && "value" in volumeData) {
                   volume = (volumeData as { value: number }).value;
                 }
               }
-              
+
               setHoveredOHLC({
-                time: new Date((param.time as number) * 1000).toLocaleDateString(),
+                time: new Date(
+                  (param.time as number) * 1000
+                ).toLocaleDateString(),
                 open,
                 high,
                 low,
@@ -1018,11 +1065,19 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             currentDecision: latest.decision || null,
             lastUpdate: new Date(),
           }));
-        }
 
-        // Fit content to view for optimal display
-        if (chartRef.current) {
-          chartRef.current.timeScale().fitContent();
+          // Set proper zoom-in by default only on initial load (not on refresh)
+          if (chartRef.current && !currentChartData.current.length) {
+            const timeScale = chartRef.current.timeScale();
+            const startIndex = Math.max(0, chartData.length - 50);
+            const startTime = chartData[startIndex].time;
+            const endTime = chartData[chartData.length - 1].time;
+
+            timeScale.setVisibleRange({
+              from: startTime,
+              to: endTime,
+            });
+          }
         }
 
         setChartState((prev) => ({ ...prev, isLoading: false }));
@@ -1119,6 +1174,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
 
+      // Store current zoom level
+      const timeScale = chartRef.current.timeScale();
+      const visibleRange = timeScale.getVisibleRange();
+
       // Clear existing decision signals
       decisionSignalsRef.current.forEach((series) => {
         try {
@@ -1135,11 +1194,20 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       if (showDecisionSignals) {
         createDecisionSignals(currentChartData.current);
       }
+
+      // Restore zoom level
+      if (visibleRange) {
+        timeScale.setVisibleRange(visibleRange);
+      }
     }, [showDecisionSignals, createDecisionSignals]);
 
     // Handle showPlotline prop changes - toggle plotline segments visibility
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
+
+      // Store current zoom level
+      const timeScale = chartRef.current.timeScale();
+      const visibleRange = timeScale.getVisibleRange();
 
       // Clear existing plotline segments
       plotlineSegmentsRef.current.forEach((series) => {
@@ -1156,6 +1224,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // Recreate plotline segments if enabled
       if (showPlotline) {
         createColoredPlotlineSegments(currentChartData.current);
+      }
+
+      // Restore zoom level
+      if (visibleRange) {
+        timeScale.setVisibleRange(visibleRange);
       }
     }, [showPlotline, createColoredPlotlineSegments]);
 
@@ -1216,23 +1289,31 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <div className="text-gray-400">Date:</div>
                 <div className="text-white">{hoveredOHLC.time}</div>
-                
+
                 <div className="text-gray-400">Open:</div>
                 <div className="text-white">₹{hoveredOHLC.open.toFixed(2)}</div>
-                
+
                 <div className="text-gray-400">High:</div>
-                <div className="text-green-400">₹{hoveredOHLC.high.toFixed(2)}</div>
-                
+                <div className="text-green-400">
+                  ₹{hoveredOHLC.high.toFixed(2)}
+                </div>
+
                 <div className="text-gray-400">Low:</div>
-                <div className="text-red-400">₹{hoveredOHLC.low.toFixed(2)}</div>
-                
+                <div className="text-red-400">
+                  ₹{hoveredOHLC.low.toFixed(2)}
+                </div>
+
                 <div className="text-gray-400">Close:</div>
-                <div className="text-white">₹{hoveredOHLC.close.toFixed(2)}</div>
-                
+                <div className="text-white">
+                  ₹{hoveredOHLC.close.toFixed(2)}
+                </div>
+
                 {hoveredOHLC.volume && (
                   <>
                     <div className="text-gray-400">Volume:</div>
-                    <div className="text-blue-400">{hoveredOHLC.volume.toLocaleString()}</div>
+                    <div className="text-blue-400">
+                      {hoveredOHLC.volume.toLocaleString()}
+                    </div>
                   </>
                 )}
               </div>

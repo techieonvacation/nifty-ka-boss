@@ -4,7 +4,6 @@ import {
   ArrowUp,
   ArrowDown,
   BarChart3,
-  AlertTriangle,
 } from "lucide-react";
 import { fetchNiftyMovements, type NiftyMovementData } from "@/lib/api/rkb";
 

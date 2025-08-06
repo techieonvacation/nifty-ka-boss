@@ -160,6 +160,13 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     }
   }, []);
 
+  // Reset zoom handler
+  const handleResetZoom = useCallback(() => {
+    if (chartRef.current?.resetZoom) {
+      chartRef.current.resetZoom();
+    }
+  }, []);
+
   // Screenshot handler for Header component
   const handleScreenshotForHeader = useCallback(() => {
     handleScreenshot();
@@ -355,6 +362,10 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         event.preventDefault();
         handleTwoScaleToggle(!twoScaleEnabled);
       }
+      if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+        event.preventDefault();
+        handleResetZoom();
+      }
       if (event.key === "Escape") {
         setMobileMenuOpen(false);
         setShowStatsPanel(false);
@@ -369,6 +380,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     handleScreenshot,
     twoScaleEnabled,
     handleTwoScaleToggle,
+    handleResetZoom,
   ]);
 
   // Update current candle data periodically (only if no RKB data)
@@ -415,13 +427,13 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         setShowDecisionSignals={handleDecisionSignalsToggle}
         showPlotline={showPlotline}
         setShowPlotline={handlePlotlineToggle}
+        onResetZoom={handleResetZoom}
       />
 
       <div className="relative grid grid-cols-[70%_30%]">
         {/* Stock Chart - Left Side */}
         <div className="relative flex-1">
           <StockChart
-            key={theme} // Force re-render when theme changes
             ref={chartRef}
             symbol={symbol}
             exchange={exchange}

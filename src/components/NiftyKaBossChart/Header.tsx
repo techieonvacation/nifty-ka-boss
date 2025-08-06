@@ -10,6 +10,7 @@ import {
   Settings,
   RefreshCw,
   Clock,
+  ZoomIn,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -37,6 +38,7 @@ interface HeaderProps {
   setShowDecisionSignals?: (signals: boolean) => void;
   showPlotline?: boolean;
   setShowPlotline?: (visible: boolean) => void;
+  onResetZoom?: () => void;
 }
 
 function Header({
@@ -57,6 +59,7 @@ function Header({
   setShowDecisionSignals,
   showPlotline = true,
   setShowPlotline,
+  onResetZoom,
 }: HeaderProps) {
   const handleScreenshot = () => {
     setTakeSnapshot(true);
@@ -222,6 +225,22 @@ function Header({
             </button>
 
             <button
+              onClick={onResetZoom}
+              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+                Theme
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+              } group`}
+              title="Reset Zoom"
+            >
+              <ZoomIn
+                size={16}
+                className="group-hover:scale-110 transition-transform"
+              />
+              <span className="text-sm font-medium">Reset Zoom</span>
+            </button>
+
+            <button
               onClick={() => window.location.reload()}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 Theme
@@ -319,24 +338,24 @@ function Header({
             <span className="text-sm font-medium">Signals</span>
           </button>
 
-                     <button
-             onClick={handlePlotlineToggle}
-             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
-               showPlotline
-                 ? Theme
-                   ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
-                   : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
-                 : Theme
-                 ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                 : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-             } group`}
-           >
-             <TrendingDown
-               size={16}
-               className="group-hover:scale-110 transition-transform"
-             />
-             <span className="text-sm font-medium">Trends</span>
-           </button>
+          <button
+            onClick={handlePlotlineToggle}
+            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+              showPlotline
+                ? Theme
+                  ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
+                : Theme
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+            } group`}
+          >
+            <TrendingDown
+              size={16}
+              className="group-hover:scale-110 transition-transform"
+            />
+            <span className="text-sm font-medium">Trends</span>
+          </button>
 
           <button
             onClick={handleTwoScaleToggle}
@@ -355,6 +374,21 @@ function Header({
               className="group-hover:scale-110 transition-transform"
             />
             <span className="text-sm font-medium">Dual Scale</span>
+          </button>
+
+          <button
+            onClick={onResetZoom}
+            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+              Theme
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+            } group`}
+          >
+            <ZoomIn
+              size={16}
+              className="group-hover:scale-110 transition-transform"
+            />
+            <span className="text-sm font-medium">Reset Zoom</span>
           </button>
 
           <button
