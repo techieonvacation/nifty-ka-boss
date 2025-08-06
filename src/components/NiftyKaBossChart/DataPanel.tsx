@@ -191,7 +191,11 @@ const DataPanel: React.FC<DataPanelProps> = ({
       } transition-all duration-300`}
     >
       {/* Enhanced Header Section - Responsive */}
-      <div className="p-3 sm:p-4 border-b border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
+      <div className={`p-3 sm:p-4 border-b ${
+        theme 
+          ? "border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100" 
+          : "border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900"
+      }`}>
         <div className="space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -199,16 +203,22 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <BarChart3 className="text-white" size={20} />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold text-white">
+                <h2 className={`text-lg sm:text-xl font-bold ${
+                  theme ? "text-gray-900" : "text-white"
+                }`}>
                   {symbol}
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-400">
+                <p className={`text-xs sm:text-sm ${
+                  theme ? "text-gray-600" : "text-gray-400"
+                }`}>
                   Nifty 50 Index
                 </p>
               </div>
             </div>
             <div className="text-left sm:text-right">
-              <div className="text-2xl sm:text-3xl font-bold text-white">
+              <div className={`text-2xl sm:text-3xl font-bold ${
+                theme ? "text-gray-900" : "text-white"
+              }`}>
                 ₹{currentPrice.toFixed(2)}
               </div>
               <div className="flex items-center space-x-2 mt-1">
@@ -231,7 +241,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs sm:text-sm space-y-2 sm:space-y-0">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
-              <div className="flex items-center space-x-2 text-gray-400">
+              <div className={`flex items-center space-x-2 ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>
                 <Clock size={12} />
                 <span>Last update: {lastUpdate}</span>
               </div>
@@ -243,42 +255,66 @@ const DataPanel: React.FC<DataPanelProps> = ({
       {/* Main Content Grid */}
       <div className="flex-1 p-4 space-y-6">
         {/* OHLC Data Panel */}
-        <div className="space-y-3  border-b border-border">
-          <h3 className="text-base font-bold text-white">OHLC Data</h3>
+        <div className={`space-y-3 border-b ${
+          theme ? "border-gray-200" : "border-gray-700"
+        }`}>
+          <h3 className={`text-base font-bold ${
+            theme ? "text-gray-900" : "text-white"
+          }`}>OHLC Data</h3>
           <div className="grid grid-cols-6 gap-4 text-sm">
             <div className="text-center">
-              <div className="text-gray-400 text-xs">Open</div>
-              <div className="text-white font-medium">
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>Open</div>
+              <div className={`font-medium ${
+                theme ? "text-gray-900" : "text-white"
+              }`}>
                 {ohlcData.open.toFixed(1)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-xs">Low</div>
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>Low</div>
               <div className="text-green-500 font-medium">
                 {ohlcData.low.toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-xs">High</div>
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>High</div>
               <div className="text-red-500 font-medium">
                 {ohlcData.high.toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-xs">Close</div>
-              <div className="text-white font-medium">
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>Close</div>
+              <div className={`font-medium ${
+                theme ? "text-gray-900" : "text-white"
+              }`}>
                 {ohlcData.close.toFixed(2)}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-xs">Vol</div>
-              <div className="text-white font-medium">
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>Vol</div>
+              <div className={`font-medium ${
+                theme ? "text-gray-900" : "text-white"
+              }`}>
                 {(ohlcData.volume / 1000000).toFixed(1)}M
               </div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-xs">Avg Vol</div>
-              <div className="text-white font-medium">36.3M</div>
+              <div className={`text-xs ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>Avg Vol</div>
+              <div className={`font-medium ${
+                theme ? "text-gray-900" : "text-white"
+              }`}>36.3M</div>
             </div>
           </div>
         </div>
@@ -287,13 +323,17 @@ const DataPanel: React.FC<DataPanelProps> = ({
         <div className="grid grid-cols-[55%_45%] gap-2">
           {/* Last 5 Days Movements */}
           <div className="space-y-3">
-            <h3 className="text-base font-bold text-white">
+            <h3 className={`text-base font-bold ${
+              theme ? "text-gray-900" : "text-white"
+            }`}>
               Last 5 Days Movements
             </h3>
             {loading ? (
               <div className="flex items-center justify-center py-4 space-x-2">
                 <Loader2 className="animate-spin text-blue-500" size={16} />
-                <span className="text-sm text-gray-400">
+                <span className={`text-sm ${
+                  theme ? "text-gray-600" : "text-gray-400"
+                }`}>
                   Loading movements...
                 </span>
               </div>
@@ -303,7 +343,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
               </div>
             ) : dailyMovements.length > 0 ? (
               <div className="space-y-2">
-                <div className="grid grid-cols-[40%_60%] gap-2 text-xs font-medium text-gray-400">
+                <div className={`grid grid-cols-[40%_60%] gap-2 text-xs font-medium ${
+                  theme ? "text-gray-600" : "text-gray-400"
+                }`}>
                   <div>Days</div>
                   <div>Returns</div>
                 </div>
@@ -312,7 +354,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     key={index}
                     className="grid grid-cols-[40%_60%] gap-2 text-xs"
                   >
-                    <div className="text-gray-300 text-xs">{movement.date}</div>
+                    <div className={`text-xs ${
+                      theme ? "text-gray-700" : "text-gray-300"
+                    }`}>{movement.date}</div>
                     <div className="flex items-center space-x-1">
                       <span
                         className={
@@ -336,7 +380,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
               </div>
             ) : (
               <div className="flex items-center justify-center py-4">
-                <span className="text-sm text-gray-400">
+                <span className={`text-sm ${
+                  theme ? "text-gray-600" : "text-gray-400"
+                }`}>
                   No movement data available
                 </span>
               </div>
@@ -345,28 +391,40 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
           {/* Technical Indicators */}
           <div className="space-y-3">
-            <h3 className="text-base font-bold text-white">
+            <h3 className={`text-base font-bold ${
+              theme ? "text-gray-900" : "text-white"
+            }`}>
               Technical Indicators
             </h3>
             <div className="space-y-2">
-              <div className="grid grid-cols-[45%_55%] gap-2 text-xs font-medium text-gray-400">
+              <div className={`grid grid-cols-[45%_55%] gap-2 text-xs font-medium ${
+                theme ? "text-gray-600" : "text-gray-400"
+              }`}>
                 <div>Indicators</div>
                 <div>Values</div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">ATR</div>
-                <div className="text-white">
+                <div className={`${
+                  theme ? "text-gray-700" : "text-gray-300"
+                }`}>ATR</div>
+                <div className={`${
+                  theme ? "text-gray-900" : "text-white"
+                }`}>
                   {technicalIndicators.atr.toFixed(2)}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">S1</div>
+                <div className={`${
+                  theme ? "text-gray-700" : "text-gray-300"
+                }`}>S1</div>
                 <div className="text-red-500">
                   {technicalIndicators.S1.toFixed(2)}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="text-gray-300">R1</div>
+                <div className={`${
+                  theme ? "text-gray-700" : "text-gray-300"
+                }`}>R1</div>
                 <div className="text-green-500">
                   {technicalIndicators.R1.toFixed(2)}
                 </div>
@@ -378,7 +436,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
         {/* Last 5 Decisions Panel */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white">Last 5 Decisions</h3>
+            <h3 className={`text-base font-bold ${
+              theme ? "text-gray-900" : "text-white"
+            }`}>Last 5 Decisions</h3>
             <Dialog open={dialogOpen} onOpenChange={handleDialogOpen}>
               <DialogTrigger asChild>
                 <button className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl">
@@ -386,9 +446,15 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   <span>See More</span>
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-[95vw] max-h-[90vh] w-full bg-gray-900 border-gray-700 text-white transition-all duration-300 ease-in-out">
+              <DialogContent className={`max-w-[95vw] max-h-[90vh] w-full transition-all duration-300 ease-in-out ${
+                theme 
+                  ? "bg-white border-gray-200 text-gray-900" 
+                  : "bg-gray-900 border-gray-700 text-white"
+              }`}>
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-bold text-white flex items-center space-x-2">
+                  <DialogTitle className={`text-xl font-bold flex items-center space-x-2 ${
+                    theme ? "text-gray-900" : "text-white"
+                  }`}>
                     <BarChart3 size={20} />
                     <span>All Trading Decisions</span>
                   </DialogTitle>
@@ -401,16 +467,26 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         className="animate-spin text-blue-500"
                         size={20}
                       />
-                      <div className="text-gray-400">
+                      <div className={`${
+                        theme ? "text-gray-600" : "text-gray-400"
+                      }`}>
                         Loading all decisions...
                       </div>
                     </div>
                   ) : error ? (
                     <div className="text-red-400 text-center py-8">{error}</div>
                   ) : allDecisions.length > 0 ? (
-                    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden transition-all duration-300 ease-in-out">
+                    <div className={`rounded-lg border overflow-hidden transition-all duration-300 ease-in-out ${
+                      theme 
+                        ? "bg-gray-50 border-gray-200" 
+                        : "bg-gray-800 border-gray-700"
+                    }`}>
                       {/* Data source info */}
-                      <div className="text-sm text-gray-500 p-3 border-b border-gray-700 bg-gray-900">
+                      <div className={`text-sm p-3 border-b ${
+                        theme 
+                          ? "text-gray-500 border-gray-200 bg-gray-100" 
+                          : "text-gray-500 border-gray-700 bg-gray-900"
+                      }`}>
                         Showing {allDecisions.length} decisions from API
                       </div>
 
@@ -418,7 +494,11 @@ const DataPanel: React.FC<DataPanelProps> = ({
                       <div className="overflow-x-auto max-h-[70vh] transition-all duration-300 ease-in-out">
                         <div className="min-w-[800px]">
                           {/* Table Header */}
-                          <div className="grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold text-gray-300 border-b border-gray-700 bg-gray-900 sticky top-0">
+                          <div className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold border-b sticky top-0 ${
+                            theme 
+                              ? "text-gray-700 border-gray-200 bg-gray-100" 
+                              : "text-gray-300 border-gray-700 bg-gray-900"
+                          }`}>
                             <div className="min-w-[80px]">Date</div>
                             <div className="min-w-[70px]">Decision</div>
                             <div className="min-w-[80px]">Price</div>
@@ -431,20 +511,30 @@ const DataPanel: React.FC<DataPanelProps> = ({
                           </div>
 
                           {/* Table Rows */}
-                          <div className="divide-y divide-gray-700">
+                          <div className={`divide-y ${
+                            theme ? "divide-gray-200" : "divide-gray-700"
+                          }`}>
                             {allDecisions.map((decision, index) => {
                               const formattedDecision =
                                 formatDecisionForDisplay(decision);
                               return (
                                 <div
                                   key={`${decision.datetime}-${index}`}
-                                  className="grid grid-cols-9 gap-2 px-2 py-2 text-sm hover:bg-gray-700 transition-all duration-200 ease-in-out"
+                                  className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-all duration-200 ease-in-out ${
+                                    theme 
+                                      ? "hover:bg-gray-100" 
+                                      : "hover:bg-gray-700"
+                                  }`}
                                 >
                                   <div className="min-w-[80px]">
-                                    <div className="text-white font-medium text-xs">
+                                    <div className={`font-medium text-xs ${
+                                      theme ? "text-gray-900" : "text-white"
+                                    }`}>
                                       {formattedDecision.date}
                                     </div>
-                                    <div className="text-gray-400 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-600" : "text-gray-400"
+                                    }`}>
                                       {formattedDecision.time}
                                     </div>
                                   </div>
@@ -459,23 +549,33 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                       {formattedDecision.decision}
                                     </span>
                                   </div>
-                                  <div className="min-w-[80px] text-white font-medium text-xs">
+                                  <div className={`min-w-[80px] font-medium text-xs ${
+                                    theme ? "text-gray-900" : "text-white"
+                                  }`}>
                                     {formattedDecision.price.toFixed(2)}
                                   </div>
-                                  <div className="min-w-[70px] text-white text-xs">
+                                  <div className={`min-w-[70px] text-xs ${
+                                    theme ? "text-gray-900" : "text-white"
+                                  }`}>
                                     {formattedDecision.has.toFixed(2)}
                                   </div>
-                                  <div className="min-w-[70px] text-white text-xs">
+                                  <div className={`min-w-[70px] text-xs ${
+                                    theme ? "text-gray-900" : "text-white"
+                                  }`}>
                                     {formattedDecision.las.toFixed(2)}
                                   </div>
                                   <div className="min-w-[100px]">
-                                    <div className="text-white font-medium text-xs">
+                                    <div className={`font-medium text-xs ${
+                                      theme ? "text-gray-900" : "text-white"
+                                    }`}>
                                       {formattedDecision.favMoves >= 0
                                         ? "+"
                                         : ""}
                                       {formattedDecision.favMoves.toFixed(2)}
                                     </div>
-                                    <div className="text-gray-400 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-600" : "text-gray-400"
+                                    }`}>
                                       (
                                       {formattedDecision.favMovesPercent.toFixed(
                                         2
@@ -484,18 +584,26 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                     </div>
                                   </div>
                                   <div className="min-w-[80px]">
-                                    <div className="text-gray-300 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-700" : "text-gray-300"
+                                    }`}>
                                       {formattedDecision.hDate || "N/A"}
                                     </div>
-                                    <div className="text-gray-500 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-500" : "text-gray-500"
+                                    }`}>
                                       {formattedDecision.time}
                                     </div>
                                   </div>
                                   <div className="min-w-[80px]">
-                                    <div className="text-gray-300 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-700" : "text-gray-300"
+                                    }`}>
                                       {formattedDecision.lDate || "N/A"}
                                     </div>
-                                    <div className="text-gray-500 text-xs">
+                                    <div className={`text-xs ${
+                                      theme ? "text-gray-500" : "text-gray-500"
+                                    }`}>
                                       09:15
                                     </div>
                                   </div>
@@ -521,7 +629,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     </div>
                   ) : (
                     <div className="flex items-center justify-center py-8">
-                      <span className="text-gray-400">
+                      <span className={`${
+                        theme ? "text-gray-600" : "text-gray-400"
+                      }`}>
                         No decisions available
                       </span>
                     </div>
@@ -533,9 +643,17 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
           {/* Show real decisions data only */}
           {lastDecisions.length > 0 ? (
-            <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div className={`rounded-lg border overflow-hidden ${
+              theme 
+                ? "bg-gray-50 border-gray-200" 
+                : "bg-gray-800 border-gray-700"
+            }`}>
               {/* Data source info */}
-              <div className="text-sm text-gray-500 p-3 border-b border-gray-700 bg-gray-900">
+              <div className={`text-sm p-3 border-b ${
+                theme 
+                  ? "text-gray-500 border-gray-200 bg-gray-100" 
+                  : "text-gray-500 border-gray-700 bg-gray-900"
+              }`}>
                 Showing {lastDecisions.length} decisions from API
               </div>
 
@@ -543,7 +661,11 @@ const DataPanel: React.FC<DataPanelProps> = ({
               <div className="overflow-x-auto max-h-96">
                 <div className="min-w-[800px]">
                   {/* Table Header */}
-                  <div className="grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold text-gray-300 border-b border-gray-700 bg-gray-900 sticky top-0">
+                  <div className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold border-b sticky top-0 ${
+                    theme 
+                      ? "text-gray-700 border-gray-200 bg-gray-100" 
+                      : "text-gray-300 border-gray-700 bg-gray-900"
+                  }`}>
                     <div className="min-w-[80px]">Date</div>
                     <div className="min-w-[70px]">Decision</div>
                     <div className="min-w-[80px]">Price</div>
@@ -556,17 +678,27 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   </div>
 
                   {/* Table Rows */}
-                  <div className="divide-y divide-gray-700">
+                  <div className={`divide-y ${
+                    theme ? "divide-gray-200" : "divide-gray-700"
+                  }`}>
                     {lastDecisions.map((decision, index) => (
                       <div
                         key={index}
-                        className="grid grid-cols-9 gap-2 px-2 py-2 text-sm hover:bg-gray-700 transition-colors duration-200"
+                        className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-colors duration-200 ${
+                          theme 
+                            ? "hover:bg-gray-100" 
+                            : "hover:bg-gray-700"
+                        }`}
                       >
                         <div className="min-w-[80px]">
-                          <div className="text-white font-medium text-xs">
+                          <div className={`font-medium text-xs ${
+                            theme ? "text-gray-900" : "text-white"
+                          }`}>
                             {decision.date}
                           </div>
-                          <div className="text-gray-400 text-xs">
+                          <div className={`text-xs ${
+                            theme ? "text-gray-600" : "text-gray-400"
+                          }`}>
                             {decision.time}
                           </div>
                         </div>
@@ -581,37 +713,55 @@ const DataPanel: React.FC<DataPanelProps> = ({
                             {decision.decision}
                           </span>
                         </div>
-                        <div className="min-w-[80px] text-white font-medium text-xs ">
+                        <div className={`min-w-[80px] font-medium text-xs ${
+                          theme ? "text-gray-900" : "text-white"
+                        }`}>
                           {decision.price.toFixed(2)}
                         </div>
-                        <div className="min-w-[70px] text-white text-xs">
+                        <div className={`min-w-[70px] text-xs ${
+                          theme ? "text-gray-900" : "text-white"
+                        }`}>
                           {decision.has.toFixed(2)}
                         </div>
-                        <div className="min-w-[70px] text-white text-xs">
+                        <div className={`min-w-[70px] text-xs ${
+                          theme ? "text-gray-900" : "text-white"
+                        }`}>
                           {decision.las.toFixed(2)}
                         </div>
                         <div className="min-w-[100px]">
-                          <div className="text-white font-medium text-xs">
+                          <div className={`font-medium text-xs ${
+                            theme ? "text-gray-900" : "text-white"
+                          }`}>
                             {decision.favMoves >= 0 ? "+" : ""}
                             {decision.favMoves.toFixed(2)}
                           </div>
-                          <div className="text-gray-400 text-xs">
+                          <div className={`text-xs ${
+                            theme ? "text-gray-600" : "text-gray-400"
+                          }`}>
                             ({decision.favMovesPercent.toFixed(2)}%)
                           </div>
                         </div>
                         <div className="min-w-[80px]">
-                          <div className="text-gray-300 text-xs">
+                          <div className={`text-xs ${
+                            theme ? "text-gray-700" : "text-gray-300"
+                          }`}>
                             {decision.hDate || "N/A"}
                           </div>
-                          <div className="text-gray-500 text-xs">
+                          <div className={`text-xs ${
+                            theme ? "text-gray-500" : "text-gray-500"
+                          }`}>
                             {decision.time}
                           </div>
                         </div>
                         <div className="min-w-[80px]">
-                          <div className="text-gray-300 text-xs">
+                          <div className={`text-xs ${
+                            theme ? "text-gray-700" : "text-gray-300"
+                          }`}>
                             {decision.lDate || "N/A"}
                           </div>
-                          <div className="text-gray-500 text-xs">09:15</div>
+                          <div className={`text-xs ${
+                            theme ? "text-gray-500" : "text-gray-500"
+                          }`}>09:15</div>
                         </div>
                         <div className="min-w-[70px] flex items-center">
                           <span
@@ -632,10 +782,16 @@ const DataPanel: React.FC<DataPanelProps> = ({
               </div>
             </div>
           ) : (
-            <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div className={`rounded-lg border overflow-hidden ${
+              theme 
+                ? "bg-gray-50 border-gray-200" 
+                : "bg-gray-800 border-gray-700"
+            }`}>
               <div className="flex items-center justify-center py-8 space-x-2">
                 <Loader2 className="animate-spin text-blue-500" size={16} />
-                <span className="text-gray-400">Loading decisions...</span>
+                <span className={`${
+                  theme ? "text-gray-600" : "text-gray-400"
+                }`}>Loading decisions...</span>
               </div>
             </div>
           )}

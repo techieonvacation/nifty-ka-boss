@@ -445,6 +445,15 @@ export default function LoginForm() {
               Sign Up
             </Link>
           </p>
+          
+          {/* Admin credentials hint for development */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-700 text-center">
+                <strong>Admin Access:</strong> admin@niftykaboss.com / admin123
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

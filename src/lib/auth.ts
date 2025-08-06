@@ -14,6 +14,7 @@ declare module "next-auth" {
       name: string | null;
       image?: string | null;
       createdAt: string;
+      role?: string; // Add role field for admin support
     };
   }
 
@@ -23,6 +24,7 @@ declare module "next-auth" {
     name: string;
     image?: string | null;
     createdAt: string;
+    role?: string; // Add role field for admin support
   }
 }
 
@@ -33,6 +35,7 @@ declare module "next-auth/jwt" {
     email: string;
     name: string;
     picture?: string;
+    role?: string; // Add role field for admin support
   }
 }
 
@@ -43,6 +46,7 @@ const userSchema = z.object({
   password: z.string(),
   fullName: z.string(),
   image: z.string().optional().nullable(),
+  role: z.string().optional(), // Add role field
 });
 
 export const authOptions: NextAuthOptions = {
@@ -69,14 +73,24 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         try {
           // Type guard for credentials
-          const hasEmailPassword = (c: unknown): c is { email: string; password: string } =>
-            !!c && typeof c === 'object' &&
-            'email' in c && typeof (c as Record<string, unknown>).email === 'string' &&
-            'password' in c && typeof (c as Record<string, unknown>).password === 'string';
-          const hasPhoneOtp = (c: unknown): c is { phone: string; otp: string } =>
-            !!c && typeof c === 'object' &&
-            'phone' in c && typeof (c as Record<string, unknown>).phone === 'string' &&
-            'otp' in c && typeof (c as Record<string, unknown>).otp === 'string';
+          const hasEmailPassword = (
+            c: unknown
+          ): c is { email: string; password: string } =>
+            !!c &&
+            typeof c === "object" &&
+            "email" in c &&
+            typeof (c as Record<string, unknown>).email === "string" &&
+            "password" in c &&
+            typeof (c as Record<string, unknown>).password === "string";
+          const hasPhoneOtp = (
+            c: unknown
+          ): c is { phone: string; otp: string } =>
+            !!c &&
+            typeof c === "object" &&
+            "phone" in c &&
+            typeof (c as Record<string, unknown>).phone === "string" &&
+            "otp" in c &&
+            typeof (c as Record<string, unknown>).otp === "string";
 
           // --- Email/Password Login ---
           if (hasEmailPassword(credentials)) {
@@ -86,6 +100,18 @@ export const authOptions: NextAuthOptions = {
                 password: z.string().min(8),
               })
               .parse(credentials);
+
+            // Check for admin credentials first (no database lookup needed)
+            if (email === "admin@niftykaboss.com" && password === "admin123") {
+              return {
+                id: "admin-user",
+                email: "admin@niftykaboss.com",
+                name: "Admin User",
+                image: null,
+                createdAt: new Date().toString(),
+                role: "admin", // Set admin role
+              };
+            }
 
             const client = await clientPromise;
             const db = client.db("Iamrakeshbansal");
@@ -99,7 +125,10 @@ export const authOptions: NextAuthOptions = {
               console.log("Invalid user data structure");
               return null;
             }
-            const isValidPassword = await bcrypt.compare(password, user.password);
+            const isValidPassword = await bcrypt.compare(
+              password,
+              user.password
+            );
             if (!isValidPassword) {
               console.log("Invalid password");
               return null;
@@ -110,6 +139,7 @@ export const authOptions: NextAuthOptions = {
               name: user.fullName,
               image: user.image || null,
               createdAt: user.createdAt?.toString() || new Date().toString(),
+              role: user.role || "user", // Default to user role
             };
           }
 
@@ -145,13 +175,16 @@ export const authOptions: NextAuthOptions = {
               return null;
             }
             // Optionally, clear OTP after successful login
-            await db.collection("users").updateOne({ phone }, { $unset: { otp: "", otpExpiry: "" } });
+            await db
+              .collection("users")
+              .updateOne({ phone }, { $unset: { otp: "", otpExpiry: "" } });
             return {
               id: user._id.toString(),
               email: user.email,
               name: user.fullName,
               image: user.image || null,
               createdAt: user.createdAt?.toString() || new Date().toString(),
+              role: user.role || "user", // Default to user role
             };
           }
 
@@ -171,6 +204,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image || undefined;
+        token.role = user.role; // Include role in JWT
       }
       return token;
     },
@@ -180,6 +214,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email;
         session.user.name = token.name;
         session.user.image = token.picture;
+        session.user.role = token.role; // Include role in session
       }
       return session;
     },

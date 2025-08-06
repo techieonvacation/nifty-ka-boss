@@ -11,7 +11,11 @@ import {
   RefreshCw,
   Clock,
   ZoomIn,
+  Shield,
+  ChevronDown,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { createPortal } from "react-dom";
 
 interface HeaderProps {
   StockInterval: string;
@@ -61,6 +65,45 @@ function Header({
   setShowPlotline,
   onResetZoom,
 }: HeaderProps) {
+  const { data: session } = useSession(); // Get session data to check admin role
+  const [adminDropdownOpen, setAdminDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = React.useState({
+    top: 0,
+    left: 0,
+  });
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setAdminDropdownOpen(false);
+      }
+    };
+
+    if (adminDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [adminDropdownOpen]);
+
+  // Update dropdown position when it opens
+  React.useEffect(() => {
+    if (adminDropdownOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+      });
+    }
+  }, [adminDropdownOpen]);
+
   const handleScreenshot = () => {
     setTakeSnapshot(true);
     // Auto-download functionality will be handled in the main component
@@ -88,6 +131,23 @@ function Header({
     if (setShowPlotline) {
       setShowPlotline(!showPlotline);
     }
+  };
+
+  // Check if user is admin
+  const isAdmin = session?.user?.role === "admin";
+
+  // Handle RKB Support action
+  const handleRkbSupport = () => {
+    console.log("RKB Support action triggered");
+    setAdminDropdownOpen(false);
+    // Add your RKB Support logic here
+  };
+
+  // Handle RKB Resistance action
+  const handleRkbResistance = () => {
+    console.log("RKB Resistance action triggered");
+    setAdminDropdownOpen(false);
+    // Add your RKB Resistance logic here
   };
 
   return (
@@ -123,6 +183,29 @@ function Header({
               <Clock size={14} className="mr-1" />
               {StockInterval}
             </div>
+
+            {/* Admin Dropdown - Only show if user is admin */}
+            {isAdmin && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
+                  className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
+                    Theme
+                      ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
+                      : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
+                  } text-sm md:text-base font-medium group`}
+                >
+                  <Shield size={14} className="mr-1" />
+                  RKB Tools
+                  <ChevronDown
+                    size={14}
+                    className={`ml-1 transition-transform duration-200 ${
+                      adminDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Center - Current Candle Data */}
@@ -407,6 +490,47 @@ function Header({
           </button>
         </div>
       </div>
+
+      {/* Portal-based dropdown menu to avoid clipping */}
+      {adminDropdownOpen &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div
+            className={`fixed rounded-lg shadow-xl z-[9999] ${
+              Theme
+                ? "bg-gray-800 border border-gray-600 text-white"
+                : "bg-white border border-gray-200 text-gray-900"
+            }`}
+            style={{
+              top: dropdownPosition.top + 8,
+              left: dropdownPosition.left,
+              minWidth: "12rem",
+              zIndex: 9999,
+            }}
+          >
+            <button
+              onClick={handleRkbSupport}
+              className={`w-full text-left px-4 py-3 text-sm hover:bg-opacity-10 transition-colors ${
+                Theme
+                  ? "hover:bg-green-400 text-green-300 border-b border-gray-600"
+                  : "hover:bg-green-100 text-green-700 border-b border-gray-200"
+              }`}
+            >
+              RKB Support
+            </button>
+            <button
+              onClick={handleRkbResistance}
+              className={`w-full text-left px-4 py-3 text-sm hover:bg-opacity-10 transition-colors ${
+                Theme
+                  ? "hover:bg-red-400 text-red-300"
+                  : "hover:bg-red-100 text-red-700"
+              }`}
+            >
+              RKB Resistance
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
