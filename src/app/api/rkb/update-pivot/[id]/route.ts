@@ -99,25 +99,25 @@ async function getJWTToken(): Promise<string | null> {
 // Main API handler for updating pivot data
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<ApiResponse>> {
   try {
-    const pivotId = params.id;
+    const { id } = await params;  
     
     console.log("RKB Update Pivot API called", {
       timestamp: new Date().toISOString(),
       url: request.url,
-      pivotId,
+      id,
     });
 
     // Validate pivot ID
-    if (!pivotId || isNaN(Number(pivotId))) {
+    if (!id || isNaN(Number(id))) {
       return NextResponse.json(
         {
           success: false,
           error: "Invalid pivot ID",
           message: "Please provide a valid numeric pivot ID",
-          details: { receivedId: pivotId },
+          details: { receivedId: id },
         },
         { status: 400 }
       );
@@ -159,7 +159,7 @@ export async function PUT(
     }
 
     console.log("Updating pivot data", {
-      pivotId,
+      id,
       isdelete: updateData.isdelete,
     });
 
@@ -167,7 +167,7 @@ export async function PUT(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    const response = await fetch(`${env.RKB_API_URL}/update_pivot/${pivotId}`, {
+    const response = await fetch(`${env.RKB_API_URL}/update_pivot/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

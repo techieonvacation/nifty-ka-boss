@@ -11,11 +11,9 @@ import {
   RefreshCw,
   Clock,
   ZoomIn,
-  Shield,
-  ChevronDown,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { createPortal } from "react-dom";
+import PivotManagement from "./PivotManagement";
 
 interface HeaderProps {
   StockInterval: string;
@@ -43,6 +41,8 @@ interface HeaderProps {
   showPlotline?: boolean;
   setShowPlotline?: (visible: boolean) => void;
   onResetZoom?: () => void;
+  onSupportChange?: (support: number) => void;
+  onResistanceChange?: (resistance: number) => void;
 }
 
 function Header({
@@ -64,45 +64,42 @@ function Header({
   showPlotline = true,
   setShowPlotline,
   onResetZoom,
+  onSupportChange,
+  onResistanceChange,
 }: HeaderProps) {
-  const { data: session } = useSession(); // Get session data to check admin role
-  const [adminDropdownOpen, setAdminDropdownOpen] = React.useState(false);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = React.useState({
-    top: 0,
-    left: 0,
-  });
+  const { data: session, status } = useSession(); // Get session data to check admin role
 
-  // Close dropdown when clicking outside
+  // Debug console logs for session and admin role
   React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setAdminDropdownOpen(false);
-      }
-    };
+    console.log("=== Header Component Debug ===");
+    console.log("Session status:", status);
+    console.log("Session data:", session);
+    console.log("User role:", session?.user?.role);
+    console.log("Is admin:", session?.user?.role === "admin");
+    console.log("User email:", session?.user?.email);
+    console.log("User name:", session?.user?.name);
+    console.log("=============================");
+  }, [session, status]);
 
-    if (adminDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [adminDropdownOpen]);
-
-  // Update dropdown position when it opens
+  // Additional debug for pivot management
   React.useEffect(() => {
-    if (adminDropdownOpen && dropdownRef.current) {
-      const rect = dropdownRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-      });
+    const isAdminUser = session?.user?.role === "admin";
+    if (isAdminUser) {
+      console.log("=== Admin Pivot Management Debug ===");
+      console.log("Symbol:", symbol);
+      console.log("Theme:", Theme);
+      console.log("===================================");
     }
-  }, [adminDropdownOpen]);
+  }, [session?.user?.role, symbol, Theme]);
+
+
+  // Auto-test admin login in development
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development" && !session) {
+      console.log("Development mode: Testing admin login...");
+      // testAdminLogin(); // Uncomment to auto-test
+    }
+  }, [session]);
 
   const handleScreenshot = () => {
     setTakeSnapshot(true);
@@ -135,20 +132,6 @@ function Header({
 
   // Check if user is admin
   const isAdmin = session?.user?.role === "admin";
-
-  // Handle RKB Support action
-  const handleRkbSupport = () => {
-    console.log("RKB Support action triggered");
-    setAdminDropdownOpen(false);
-    // Add your RKB Support logic here
-  };
-
-  // Handle RKB Resistance action
-  const handleRkbResistance = () => {
-    console.log("RKB Resistance action triggered");
-    setAdminDropdownOpen(false);
-    // Add your RKB Resistance logic here
-  };
 
   return (
     <div className="relative w-full">
@@ -184,27 +167,14 @@ function Header({
               {StockInterval}
             </div>
 
-            {/* Admin Dropdown - Only show if user is admin */}
+            {/* Admin Pivot Management - Only show if user is admin */}
             {isAdmin && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
-                  className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
-                    Theme
-                      ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
-                      : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
-                  } text-sm md:text-base font-medium group`}
-                >
-                  <Shield size={14} className="mr-1" />
-                  RKB Tools
-                  <ChevronDown
-                    size={14}
-                    className={`ml-1 transition-transform duration-200 ${
-                      adminDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-              </div>
+              <PivotManagement
+                theme={Theme}
+                symbol={symbol}
+                onSupportChange={onSupportChange}
+                onResistanceChange={onResistanceChange}
+              />
             )}
           </div>
 
@@ -490,47 +460,6 @@ function Header({
           </button>
         </div>
       </div>
-
-      {/* Portal-based dropdown menu to avoid clipping */}
-      {adminDropdownOpen &&
-        typeof window !== "undefined" &&
-        createPortal(
-          <div
-            className={`fixed rounded-lg shadow-xl z-[9999] ${
-              Theme
-                ? "bg-gray-800 border border-gray-600 text-white"
-                : "bg-white border border-gray-200 text-gray-900"
-            }`}
-            style={{
-              top: dropdownPosition.top + 8,
-              left: dropdownPosition.left,
-              minWidth: "12rem",
-              zIndex: 9999,
-            }}
-          >
-            <button
-              onClick={handleRkbSupport}
-              className={`w-full text-left px-4 py-3 text-sm hover:bg-opacity-10 transition-colors ${
-                Theme
-                  ? "hover:bg-green-400 text-green-300 border-b border-gray-600"
-                  : "hover:bg-green-100 text-green-700 border-b border-gray-200"
-              }`}
-            >
-              RKB Support
-            </button>
-            <button
-              onClick={handleRkbResistance}
-              className={`w-full text-left px-4 py-3 text-sm hover:bg-opacity-10 transition-colors ${
-                Theme
-                  ? "hover:bg-red-400 text-red-300"
-                  : "hover:bg-red-100 text-red-700"
-              }`}
-            >
-              RKB Resistance
-            </button>
-          </div>,
-          document.body
-        )}
     </div>
   );
 }

@@ -100,6 +100,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     atr: 0,
     S1: 0,
     R1: 0,
+    rkbSupport: 0,
+    rkbResistance: 0,
   });
 
   // Chart ref for accessing chart methods
@@ -128,6 +130,21 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   const handleScreenshotForHeader = useCallback(() => {
     handleScreenshot();
   }, [handleScreenshot]);
+
+  // Handle pivot data updates
+  const handleSupportChange = useCallback((support: number) => {
+    setTechnicalIndicators(prev => ({
+      ...prev,
+      rkbSupport: support,
+    }));
+  }, []);
+
+  const handleResistanceChange = useCallback((resistance: number) => {
+    setTechnicalIndicators(prev => ({
+      ...prev,
+      rkbResistance: resistance,
+    }));
+  }, []);
 
   // Load RKB data on component mount with optimized fetching
   useEffect(() => {
@@ -166,6 +183,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             atr: latestData.atr || 0,
             S1: latestData.S1 || 0,
             R1: latestData.R1 || 0,
+            rkbSupport: technicalIndicators.rkbSupport,
+            rkbResistance: technicalIndicators.rkbResistance,
           });
         }
       } catch (error) {
@@ -178,6 +197,31 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
     loadRkbData();
   }, []);
+
+  // Load pivot data on component mount
+  useEffect(() => {
+    const loadPivotData = async () => {
+      try {
+        const response = await fetch("/api/rkb/get-all-pivots");
+        const data = await response.json();
+        
+        if (data.success && data.pivots) {
+          const currentPivot = data.pivots.find((p: { symbol: string }) => p.symbol === symbol);
+          if (currentPivot) {
+            setTechnicalIndicators(prev => ({
+              ...prev,
+              rkbSupport: currentPivot.support,
+              rkbResistance: currentPivot.resistance,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Error loading pivot data:", error);
+      }
+    };
+
+    loadPivotData();
+  }, [symbol]);
 
   // Load decisions data on component mount with optimized fetching
   useEffect(() => {
@@ -386,6 +430,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         showPlotline={showPlotline}
         setShowPlotline={handlePlotlineToggle}
         onResetZoom={handleResetZoom}
+        onSupportChange={handleSupportChange}
+        onResistanceChange={handleResistanceChange}
       />
 
       <div className="relative grid grid-cols-[70%_30%]">
