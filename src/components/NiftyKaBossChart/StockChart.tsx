@@ -26,6 +26,7 @@ import {
   fetchRkbData,
   convertRkbDataToChartData,
   getDecisionSignals,
+  abortAllRequests,
 } from "@/lib/api/rkb";
 
 // Enhanced TypeScript interfaces for better type safety
@@ -110,6 +111,57 @@ const PERFORMANCE_CONFIG = {
   MAX_DATA_POINTS: 1000,
   ANIMATION_DURATION: 300,
 } as const;
+
+// CHART STABILITY: View state preservation utilities for maintaining user's zoom and scroll position
+interface ChartViewState {
+  visibleRange: any | null; // Using any to handle Time type compatibility
+  scrollPosition: number;
+  barSpacing: number;
+}
+
+const preserveChartViewState = (chart: IChartApi | null): ChartViewState | null => {
+  if (!chart) return null;
+  
+  try {
+    const timeScale = chart.timeScale();
+    return {
+      visibleRange: timeScale.getVisibleRange(),
+      scrollPosition: timeScale.scrollPosition(),
+      barSpacing: timeScale.options().barSpacing || 12,
+    };
+  } catch (error) {
+    console.warn("Error preserving chart view state:", error);
+    return null;
+  }
+};
+
+const restoreChartViewState = (chart: IChartApi | null, viewState: ChartViewState | null): void => {
+  if (!chart || !viewState) return;
+  
+  try {
+    const timeScale = chart.timeScale();
+    
+    // Restore visible range
+    if (viewState.visibleRange) {
+      timeScale.setVisibleRange(viewState.visibleRange);
+    }
+    
+    // Restore scroll position with a slight delay to ensure proper restoration
+    setTimeout(() => {
+      if (chart && viewState.scrollPosition !== undefined) {
+        try {
+          const timeScale = chart.timeScale();
+          timeScale.scrollToPosition(viewState.scrollPosition, false);
+        } catch (error) {
+          console.warn("Error restoring scroll position:", error);
+        }
+      }
+    }, 0);
+    
+  } catch (error) {
+    console.warn("Error restoring chart view state:", error);
+  }
+};
 
 // Professional color scheme for different themes with enhanced triangle colors
 const THEME_COLORS = {
@@ -494,19 +546,34 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Enhanced colored plotline segments with smooth transitions
     const createColoredPlotlineSegments = useCallback(
       (chartData: ChartData[]) => {
+        // BUG FIX: Enhanced validation to prevent disposal errors
         if (!chartRef.current || !showPlotline || !chartContainerRef.current)
           return;
 
-        // Clear existing segments
-        plotlineSegmentsRef.current.forEach((series) => {
-          try {
-            if (chartRef.current && series) {
-              chartRef.current.removeSeries(series);
+        // Additional safety check: ensure chart is not disposed
+        try {
+          // Test if chart is still valid by checking a simple property
+          chartRef.current.timeScale();
+        } catch (error) {
+          console.warn("Chart is disposed, skipping plotline segment creation");
+          return;
+        }
+
+        // Clear existing segments with enhanced error handling
+        if (plotlineSegmentsRef.current.length > 0) {
+          plotlineSegmentsRef.current.forEach((series, index) => {
+            try {
+              if (chartRef.current && series) {
+                chartRef.current.removeSeries(series);
+              }
+            } catch (error: any) {
+              // Silently handle disposal errors
+              if (error?.message && !error.message.includes('disposed')) {
+                console.warn(`Error removing plotline segment ${index}:`, error.message);
+              }
             }
-          } catch (error) {
-            console.warn("Error removing plotline segment:", error);
-          }
-        });
+          });
+        }
         plotlineSegmentsRef.current = [];
 
         if (!chartData || chartData.length === 0) return;
@@ -619,12 +686,27 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         )
           return;
 
+        // BUG FIX: Enhanced validation to prevent disposal errors
+        try {
+          // Test if chart is still valid by checking a simple property
+          chartRef.current.timeScale();
+        } catch (error) {
+          console.warn("Chart is disposed, skipping decision triangles creation");
+          return;
+        }
+
         try {
           // Initialize series markers plugin if not already created
           if (!seriesMarkersPluginRef.current) {
-            seriesMarkersPluginRef.current = createSeriesMarkers(
-              candlestickSeriesRef.current
-            );
+            // Additional safety check before creating markers plugin
+            if (candlestickSeriesRef.current) {
+              seriesMarkersPluginRef.current = createSeriesMarkers(
+                candlestickSeriesRef.current
+              );
+            } else {
+              console.warn("Candlestick series not available for markers");
+              return;
+            }
           }
 
           // Filter chart data for specific decision types
@@ -940,13 +1022,56 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       }
 
       return () => {
+        // BUG FIX: Enhanced cleanup to prevent disposal errors and abort API requests
+        console.log('🧹 Cleaning up StockChart component...');
+        
+        // Abort any ongoing API requests to prevent "operation was aborted" errors
+        try {
+          abortAllRequests();
+        } catch (error) {
+          console.warn('Error aborting API requests:', error);
+        }
+        
         window.removeEventListener("resize", handleResize);
         if (resizeTimeoutRef.current) {
           clearTimeout(resizeTimeoutRef.current);
         }
-        if (chartRef.current) {
-          chartRef.current.remove();
+        
+        // Clean up plotline segments before disposing chart
+        if (plotlineSegmentsRef.current.length > 0) {
+          plotlineSegmentsRef.current.forEach((series, index) => {
+            try {
+              if (chartRef.current && series) {
+                chartRef.current.removeSeries(series);
+              }
+            } catch (error) {
+              // Silently handle disposal errors during cleanup
+            }
+          });
+          plotlineSegmentsRef.current = [];
         }
+        
+        // Clean up series markers plugin
+        if (seriesMarkersPluginRef.current) {
+          try {
+            seriesMarkersPluginRef.current.setMarkers([]);
+          } catch (error) {
+            // Silently handle disposal errors during cleanup
+          }
+          seriesMarkersPluginRef.current = null;
+        }
+        
+        // Dispose chart last
+        if (chartRef.current) {
+          try {
+            chartRef.current.remove();
+          } catch (error) {
+            // Silently handle disposal errors
+          }
+          chartRef.current = null;
+        }
+        
+        console.log('✅ StockChart component cleanup completed');
       };
     }, [
       showVolume,
@@ -1065,17 +1190,43 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             lastUpdate: new Date(),
           }));
 
-          // Set proper zoom-in by default only on initial load (not on refresh)
-          if (chartRef.current && !currentChartData.current.length) {
+          // CHART STABILITY: Set initial zoom only on first load, preserve user zoom on subsequent updates
+          if (chartRef.current && currentChartData.current.length === 0) {
+            // This is the first load - set initial zoom to show last 50 bars
             const timeScale = chartRef.current.timeScale();
             const startIndex = Math.max(0, chartData.length - 50);
             const startTime = chartData[startIndex].time;
             const endTime = chartData[chartData.length - 1].time;
 
-            timeScale.setVisibleRange({
-              from: startTime,
-              to: endTime,
-            });
+            try {
+              timeScale.setVisibleRange({
+                from: startTime,
+                to: endTime,
+              });
+            } catch (error) {
+              console.warn("Error setting initial zoom level:", error);
+              timeScale.fitContent();
+            }
+          } else if (chartRef.current && currentChartData.current.length > 0) {
+            // This is a data refresh - preserve the user's current zoom and scroll position
+            const timeScale = chartRef.current.timeScale();
+            const currentVisibleRange = timeScale.getVisibleRange();
+            const currentScrollPosition = timeScale.scrollPosition();
+
+            // After data update, restore the exact view state
+            setTimeout(() => {
+              if (chartRef.current && currentVisibleRange) {
+                try {
+                  const timeScale = chartRef.current.timeScale();
+                  timeScale.setVisibleRange(currentVisibleRange);
+                  if (currentScrollPosition !== undefined) {
+                    timeScale.scrollToPosition(currentScrollPosition, false);
+                  }
+                } catch (error) {
+                  console.warn("Error restoring view state after data refresh:", error);
+                }
+              }
+            }, 0);
           }
         }
 
@@ -1116,8 +1267,20 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     }, [loadData]);
 
     // Update theme when it changes
+    // CHART STABILITY: Only update colors without affecting chart view state
     useEffect(() => {
       if (chartRef.current) {
+        // BUG FIX: Additional safety check to prevent disposal errors
+        try {
+          chartRef.current.timeScale();
+        } catch (error) {
+          console.warn("Chart is disposed, skipping theme update");
+          return;
+        }
+        // Store current view state using utility function
+        const viewState = preserveChartViewState(chartRef.current);
+
+        // Update only visual theme properties without reinitializing chart
         chartRef.current.applyOptions({
           layout: {
             background: {
@@ -1152,8 +1315,77 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             borderColor: colors.grid,
           },
         });
+
+        // Update series colors to match new theme
+        if (candlestickSeriesRef.current) {
+          candlestickSeriesRef.current.applyOptions({
+            upColor: colors.upColor,
+            downColor: colors.downColor,
+            wickUpColor: colors.upColor,
+            wickDownColor: colors.downColor,
+          });
+        }
+
+        if (candlestickLeftSeriesRef.current) {
+          candlestickLeftSeriesRef.current.applyOptions({
+            upColor: colors.upColor,
+            downColor: colors.downColor,
+            wickUpColor: colors.upColor,
+            wickDownColor: colors.downColor,
+          });
+        }
+
+        if (volumeSeriesRef.current) {
+          volumeSeriesRef.current.applyOptions({
+            color: colors.volume,
+          });
+        }
+
+        if (smaSeriesRef.current) {
+          smaSeriesRef.current.applyOptions({
+            color: colors.sma,
+          });
+        }
+
+        if (emaSeriesRef.current) {
+          emaSeriesRef.current.applyOptions({
+            color: colors.ema,
+          });
+        }
+
+        if (rsiSeriesRef.current) {
+          rsiSeriesRef.current.applyOptions({
+            color: colors.rsi,
+          });
+        }
+
+        if (macdSeriesRef.current) {
+          macdSeriesRef.current.applyOptions({
+            color: colors.macd,
+          });
+        }
+
+        if (macdLineSeriesRef.current) {
+          macdLineSeriesRef.current.applyOptions({
+            color: colors.macd,
+          });
+        }
+
+        if (signalLineSeriesRef.current) {
+          signalLineSeriesRef.current.applyOptions({
+            color: colors.signal,
+          });
+        }
+
+        // Update plotline segments with new theme colors
+        if (showPlotline && currentChartData.current.length > 0) {
+          createColoredPlotlineSegments(currentChartData.current);
+        }
+
+        // Restore exact view state using utility function
+        restoreChartViewState(chartRef.current, viewState);
       }
-    }, [colors]);
+    }, [colors, showPlotline, createColoredPlotlineSegments]);
 
     /**
      * Auto-refresh functionality for real-time data synchronization
@@ -1187,22 +1419,35 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // CHART STABILITY: Preserve zoom and scroll state during plotline visibility changes
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
+      
+      // BUG FIX: Additional safety check to prevent disposal errors
+      try {
+        chartRef.current.timeScale();
+      } catch (error) {
+        console.warn("Chart is disposed, skipping plotline toggle");
+        return;
+      }
 
-      // Store current view state to preserve user's zoom and scroll position
-      const timeScale = chartRef.current.timeScale();
-      const visibleRange = timeScale.getVisibleRange();
-      const scrollPosition = timeScale.scrollPosition();
+      // Store current view state using utility function
+      const viewState = preserveChartViewState(chartRef.current);
 
       // Clear existing plotline segments without affecting chart view
-      plotlineSegmentsRef.current.forEach((series) => {
-        try {
-          if (chartRef.current && series) {
-            chartRef.current.removeSeries(series);
+      // BUG FIX: Enhanced error handling to prevent "Value is undefined" errors
+      if (plotlineSegmentsRef.current.length > 0) {
+        plotlineSegmentsRef.current.forEach((series, index) => {
+          try {
+            // Check if both chart and series are valid before removal
+            if (chartRef.current && series) {
+              chartRef.current.removeSeries(series);
+            }
+          } catch (error: any) {
+            // Silently handle disposal errors to prevent console spam
+            if (error?.message && !error.message.includes('disposed')) {
+              console.warn(`Error removing plotline segment ${index}:`, error.message);
+            }
           }
-        } catch (error) {
-          console.warn("Error removing plotline segment:", error);
-        }
-      });
+        });
+      }
       plotlineSegmentsRef.current = [];
 
       // Recreate plotline segments if enabled
@@ -1210,21 +1455,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         createColoredPlotlineSegments(currentChartData.current);
       }
 
-      // Restore exact view state to maintain chart stability
-      if (visibleRange) {
-        try {
-          timeScale.setVisibleRange(visibleRange);
-          // Additional scroll position restoration for pixel-perfect stability
-          if (scrollPosition !== undefined) {
-            timeScale.scrollToPosition(scrollPosition, false);
-          }
-        } catch (error) {
-          console.warn("Error restoring chart view state:", error);
-        }
-      }
+      // Restore exact view state using utility function
+      restoreChartViewState(chartRef.current, viewState);
     }, [showPlotline, createColoredPlotlineSegments]);
 
     // Handle showDecisionTriangles prop changes - toggle triangle markers visibility
+    // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
     useEffect(() => {
       if (
         !chartRef.current ||
@@ -1232,27 +1468,102 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         !currentChartData.current.length
       )
         return;
+        
+      // BUG FIX: Additional safety check to prevent disposal errors
+      try {
+        chartRef.current.timeScale();
+      } catch (error) {
+        console.warn("Chart is disposed, skipping decision triangles toggle");
+        return;
+      }
 
-      // Store current zoom level
-      const timeScale = chartRef.current.timeScale();
-      const visibleRange = timeScale.getVisibleRange();
+      // Store current view state using utility function
+      const viewState = preserveChartViewState(chartRef.current);
 
       if (showDecisionTriangles) {
         // Create triangle markers if enabled using chart data
         createDecisionTriangles(currentChartData.current);
       } else {
-        // Remove markers plugin if disabled
+        // Remove markers plugin if disabled without affecting chart view
         if (seriesMarkersPluginRef.current) {
           seriesMarkersPluginRef.current.setMarkers([]);
           seriesMarkersPluginRef.current = null;
         }
       }
 
-      // Restore zoom level
-      if (visibleRange) {
-        timeScale.setVisibleRange(visibleRange);
-      }
+      // Restore exact view state using utility function
+      restoreChartViewState(chartRef.current, viewState);
     }, [showDecisionTriangles, createDecisionTriangles]);
+
+    // Handle enableTwoScale prop changes - toggle left price scale visibility
+    // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
+    useEffect(() => {
+      if (!chartRef.current) return;
+      
+      // BUG FIX: Additional safety check to prevent disposal errors
+      try {
+        chartRef.current.timeScale();
+      } catch (error) {
+        console.warn("Chart is disposed, skipping two-scale toggle");
+        return;
+      }
+
+      // Store current view state using utility function
+      const viewState = preserveChartViewState(chartRef.current);
+
+      // Update left price scale visibility without affecting chart view
+      chartRef.current.applyOptions({
+        leftPriceScale: {
+          borderColor: colors.grid,
+          visible: enableTwoScale,
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2,
+          },
+        },
+      });
+
+      // Handle left scale candlestick series
+      if (enableTwoScale && !candlestickLeftSeriesRef.current && currentChartData.current.length > 0) {
+        // Create left scale candlestick series if enabled and not exists
+        try {
+          candlestickLeftSeriesRef.current = chartRef.current.addSeries(
+            CandlestickSeries,
+            {
+              priceScaleId: "left",
+              upColor: colors.upColor,
+              downColor: colors.downColor,
+              borderVisible: false,
+              wickUpColor: colors.upColor,
+              wickDownColor: colors.downColor,
+            }
+          );
+
+          // Set data for left scale with slight offset for demonstration
+          const leftScaleData = currentChartData.current.map((item) => ({
+            ...item,
+            open: item.open * 0.98,
+            high: item.high * 0.98,
+            low: item.low * 0.98,
+            close: item.close * 0.98,
+          }));
+          candlestickLeftSeriesRef.current.setData(leftScaleData);
+        } catch (error) {
+          console.warn("Error creating left scale series:", error);
+        }
+      } else if (!enableTwoScale && candlestickLeftSeriesRef.current) {
+        // Remove left scale candlestick series if disabled
+        try {
+          chartRef.current.removeSeries(candlestickLeftSeriesRef.current);
+          candlestickLeftSeriesRef.current = null;
+        } catch (error) {
+          console.warn("Error removing left scale series:", error);
+        }
+      }
+
+      // Restore exact view state using utility function
+      restoreChartViewState(chartRef.current, viewState);
+    }, [enableTwoScale, colors]);
 
     return (
       <div className={`relative ${className}`}>

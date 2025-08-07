@@ -122,6 +122,12 @@ const CACHE_DURATION = {
 // In-memory cache for production optimization
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 
+// Request deduplication: Track ongoing requests to prevent duplicates
+const ongoingRequests = new Map<string, Promise<any>>();
+
+// Global abort controllers for cleanup
+const abortControllers = new Map<string, AbortController>();
+
 // Helper function to get cached data
 function getCachedData<T>(key: string, maxAge: number): T | null {
   const cached = cache.get(key);
@@ -136,13 +142,16 @@ function setCachedData<T>(key: string, data: T): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-// Helper function to make API requests with error handling and retries
+// Helper function to make API requests with error handling, retries, and deduplication
 async function makeApiRequest<T>(
   url: string, 
   options: RequestInit = {}, 
   cacheKey?: string, 
   cacheDuration?: number
 ): Promise<T> {
+  // BUG FIX: Request deduplication to prevent multiple identical requests
+  const requestKey = `${url}_${JSON.stringify(options)}`;
+  
   try {
     // Check cache first if cacheKey is provided
     if (cacheKey && cacheDuration) {
@@ -153,35 +162,91 @@ async function makeApiRequest<T>(
       }
     }
 
-    // Set up request with timeout
+    // BUG FIX: Check if there's already an ongoing request for the same endpoint
+    if (ongoingRequests.has(requestKey)) {
+      console.log(`Reusing ongoing request for ${url}`);
+      return await ongoingRequests.get(requestKey);
+    }
+
+    // BUG FIX: Clean up any existing abort controller for this request
+    if (abortControllers.has(requestKey)) {
+      const existingController = abortControllers.get(requestKey);
+      existingController?.abort();
+      abortControllers.delete(requestKey);
+    }
+
+    // Set up new request with timeout and proper cleanup
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    abortControllers.set(requestKey, controller);
     
-    // Cache the result if cacheKey is provided
-    if (cacheKey && cacheDuration) {
-      setCachedData(cacheKey, data);
-    }
+    const requestPromise = (async () => {
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      try {
+        timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 30000); // 30 second timeout
 
-    return data;
-  } catch (error) {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...options.headers,
+          },
+        });
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Cache the result if cacheKey is provided
+        if (cacheKey && cacheDuration) {
+          setCachedData(cacheKey, data);
+        }
+
+        return data;
+      } catch (error: any) {
+        // BUG FIX: Handle abort errors gracefully
+        if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+          console.warn(`Request aborted for ${url} - this is normal during rapid navigation`);
+          throw new Error('Request was cancelled');
+        }
+        throw error;
+      } finally {
+        // Clean up timeout and tracking
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        ongoingRequests.delete(requestKey);
+        abortControllers.delete(requestKey);
+      }
+    })();
+
+    // Track the ongoing request
+    ongoingRequests.set(requestKey, requestPromise);
+    
+    return await requestPromise;
+    
+  } catch (error: any) {
+    // Clean up on error
+    ongoingRequests.delete(requestKey);
+    abortControllers.delete(requestKey);
+    
+    // BUG FIX: Improve error messaging for abort errors
+    if (error.message === 'Request was cancelled') {
+      // Don't log cancelled requests as errors
+      throw error;
+    }
+    
     console.error(`API request failed for ${url}:`, error);
     throw error;
   }
@@ -203,7 +268,13 @@ export async function fetchRkbData(): Promise<RkbDataPoint[]> {
     }
 
     return result.data || [];
-  } catch (error) {
+  } catch (error: any) {
+    // BUG FIX: Handle cancelled requests gracefully
+    if (error.message === 'Request was cancelled') {
+      console.log('RKB data request was cancelled - this is normal during rapid navigation');
+      return []; // Return empty array instead of throwing
+    }
+    
     console.error('Error fetching RKB data:', error);
     throw error;
   }
@@ -230,7 +301,13 @@ export async function fetchDecisions(): Promise<DecisionData[]> {
     }
 
     return result.decisions || [];
-  } catch (error) {
+  } catch (error: any) {
+    // BUG FIX: Handle cancelled requests gracefully
+    if (error.message === 'Request was cancelled') {
+      console.log('Decisions data request was cancelled - this is normal during rapid navigation');
+      return []; // Return empty array instead of throwing
+    }
+    
     console.error('Error fetching decisions data:', error);
     throw error;
   }
@@ -257,7 +334,13 @@ export async function fetchNiftyMovements(): Promise<NiftyMovementData[]> {
     }
 
     return result.data || [];
-  } catch (error) {
+  } catch (error: any) {
+    // BUG FIX: Handle cancelled requests gracefully
+    if (error.message === 'Request was cancelled') {
+      console.log('Nifty movement data request was cancelled - this is normal during rapid navigation');
+      return []; // Return empty array instead of throwing
+    }
+    
     console.error('Error fetching nifty movement data:', error);
     throw error;
   }
@@ -394,6 +477,23 @@ export function getDecisionSignals(data: ChartDataPoint[]): Array<{
         shape,
       };
     });
+}
+
+// BUG FIX: Cleanup function to abort all ongoing requests
+export function abortAllRequests(): void {
+  console.log(`Aborting ${abortControllers.size} ongoing requests`);
+  
+  for (const [key, controller] of abortControllers.entries()) {
+    try {
+      controller.abort();
+    } catch (error) {
+      console.warn(`Error aborting request ${key}:`, error);
+    }
+  }
+  
+  abortControllers.clear();
+  ongoingRequests.clear();
+  console.log('All ongoing requests aborted');
 }
 
 // Clear cache for testing or manual refresh

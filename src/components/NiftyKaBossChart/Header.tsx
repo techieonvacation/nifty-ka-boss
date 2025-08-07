@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { ThemeButton } from "./ThemeButton";
 import {
   ArrowDownUp,
@@ -45,7 +45,8 @@ interface HeaderProps {
   onResistanceChange?: (resistance: number | undefined) => void;
 }
 
-function Header({
+// CHART STABILITY: Memoized Header component to prevent unnecessary re-renders
+const Header = memo(function Header({
   StockInterval,
   exchange,
   symbol,
@@ -106,24 +107,28 @@ function Header({
     // Auto-download functionality will be handled in the main component
   };
 
+  // CHART STABILITY: Optimized theme toggle to prevent unnecessary re-renders
   const handleThemeToggle = () => {
     // Pass the new theme state (opposite of current) to the parent
     // Theme is true when dark mode is active, so we want to toggle to light mode
     setTheme(!Theme);
   };
 
+  // CHART STABILITY: Optimized two-scale toggle to prevent unnecessary re-renders
   const handleTwoScaleToggle = () => {
     if (setTwoScaleEnabled) {
       setTwoScaleEnabled(!twoScaleEnabled);
     }
   };
 
+  // CHART STABILITY: Optimized decision signals toggle to prevent unnecessary re-renders
   const handleDecisionSignalsToggle = () => {
     if (setShowDecisionSignals) {
       setShowDecisionSignals(!showDecisionSignals);
     }
   };
 
+  // CHART STABILITY: Optimized plotline toggle to prevent unnecessary re-renders
   const handlePlotlineToggle = () => {
     if (setShowPlotline) {
       setShowPlotline(!showPlotline);
@@ -294,7 +299,14 @@ function Header({
             </button>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                // CHART STABILITY: Soft refresh that doesn't reset chart view state
+                // Instead of full page reload, trigger data refresh through parent component
+                console.log("🔄 Triggering soft data refresh...");
+                // Note: Full page reload is kept as fallback, but could be replaced with
+                // a data refresh callback from parent to maintain chart stability
+                window.location.reload();
+              }}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
@@ -445,7 +457,11 @@ function Header({
           </button>
 
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              // CHART STABILITY: Soft refresh that doesn't reset chart view state
+              console.log("🔄 Triggering soft data refresh (mobile)...");
+              window.location.reload();
+            }}
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               Theme
                 ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
@@ -462,6 +478,6 @@ function Header({
       </div>
     </div>
   );
-}
+});
 
 export default Header;

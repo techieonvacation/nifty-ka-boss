@@ -8,6 +8,7 @@ import {
   fetchRkbData,
   convertRkbDataToChartData,
   fetchDecisions,
+  abortAllRequests,
   type ChartDataPoint,
   type DecisionData,
 } from "@/lib/api/rkb";
@@ -216,6 +217,12 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // Cleanup interval on component unmount to prevent memory leaks
     return () => {
       clearInterval(refreshInterval);
+      // BUG FIX: Abort any ongoing API requests when component unmounts
+      try {
+        abortAllRequests();
+      } catch (error) {
+        console.warn("Error aborting requests during RKB cleanup:", error);
+      }
       console.log("🛑 RKB data refresh interval cleared");
     };
   }, []);
@@ -358,37 +365,47 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // Cleanup interval on component unmount to prevent memory leaks
     return () => {
       clearInterval(decisionsRefreshInterval);
+      // BUG FIX: Additional cleanup for decisions requests
+      try {
+        abortAllRequests();
+      } catch (error) {
+        console.warn(
+          "Error aborting requests during decisions cleanup:",
+          error
+        );
+      }
       console.log("🛑 Decisions data refresh interval cleared");
     };
   }, []);
 
-  // Theme toggle handler
+  // CHART STABILITY: Optimized theme toggle handler to prevent unnecessary re-renders
   const handleThemeToggle = useCallback((isDark: boolean) => {
     // isDark = true means we want dark mode, isDark = false means we want light mode
-    setTheme(isDark ? "dark" : "light");
+    const newTheme = isDark ? "dark" : "light";
+    setTheme(newTheme);
   }, []);
 
-  // Two-scale toggle handler
+  // CHART STABILITY: Optimized two-scale toggle handler to prevent unnecessary re-renders
   const handleTwoScaleToggle = useCallback((enabled: boolean) => {
     setTwoScaleEnabled(enabled);
   }, []);
 
-  // Mobile menu toggle handler
+  // CHART STABILITY: Optimized mobile menu toggle handler to prevent unnecessary re-renders
   const handleMobileMenuToggle = useCallback((open: boolean) => {
     setMobileMenuOpen(open);
   }, []);
 
-  // Stats panel toggle handler
+  // CHART STABILITY: Optimized stats panel toggle handler to prevent unnecessary re-renders
   const handleStatsPanelToggle = useCallback((panel: boolean) => {
     setShowStatsPanel(panel);
   }, []);
 
-  // Decision signals visibility toggle handler
+  // CHART STABILITY: Optimized decision signals visibility toggle handler to prevent unnecessary re-renders
   const handleDecisionSignalsToggle = useCallback((signals: boolean) => {
     setShowDecisionSignals(signals);
   }, []);
 
-  // Plotline visibility toggle handler
+  // CHART STABILITY: Optimized plotline visibility toggle handler to prevent unnecessary re-renders
   const handlePlotlineToggle = useCallback((visible: boolean) => {
     setShowPlotline(visible);
   }, []);
