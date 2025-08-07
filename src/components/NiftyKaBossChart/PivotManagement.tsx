@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,6 @@ import {
   CheckCircle,
   Trash2,
   Plus,
-  X,
 } from "lucide-react";
 
 interface PivotData {
@@ -49,7 +48,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPivot, setEditingPivot] = useState<PivotData | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [, setIsAddingNew] = useState(false);
   const [formData, setFormData] = useState({
     symbol: symbol,
     support: "",
@@ -57,7 +56,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
   });
 
   // Fetch all pivots
-  const fetchPivots = async () => {
+  const fetchPivots = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -90,12 +89,12 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [symbol, onSupportChange, onResistanceChange]);
 
   // Load pivots on mount
   useEffect(() => {
     fetchPivots();
-  }, [symbol]);
+  }, [symbol, fetchPivots]);
 
   // Reset form
   const resetForm = () => {

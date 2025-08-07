@@ -21,15 +21,19 @@ import {
   LineStyle,
   UTCTimestamp,
   createSeriesMarkers,
+  Time,
 } from "lightweight-charts";
 import {
   fetchRkbData,
   convertRkbDataToChartData,
-  getDecisionSignals,
   abortAllRequests,
 } from "@/lib/api/rkb";
 
 // Enhanced TypeScript interfaces for better type safety
+interface SeriesMarkersPlugin {
+  setMarkers: (markers: unknown[]) => void;
+}
+
 interface StockChartProps {
   symbol?: string;
   exchange?: string;
@@ -45,7 +49,6 @@ interface StockChartProps {
   enableTwoScale?: boolean;
   showPlotline?: boolean;
   showDecisionSignals?: boolean;
-  showDecisionTriangles?: boolean;
   autoRefresh?: boolean;
   refreshInterval?: number;
 }
@@ -114,7 +117,7 @@ const PERFORMANCE_CONFIG = {
 
 // CHART STABILITY: View state preservation utilities for maintaining user's zoom and scroll position
 interface ChartViewState {
-  visibleRange: any | null; // Using any to handle Time type compatibility
+  visibleRange: { from: Time; to: Time } | null; // Proper range interface for LightweightCharts
   scrollPosition: number;
   barSpacing: number;
 }
@@ -219,7 +222,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       enableTwoScale = true,
       showPlotline = true,
       showDecisionSignals = true,
-      showDecisionTriangles = true,
       autoRefresh = true,
       refreshInterval = PERFORMANCE_CONFIG.REFRESH_INTERVAL,
     },
@@ -241,7 +243,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const signalLineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSegmentsRef = useRef<ISeriesApi<"Line">[]>([]);
-    const seriesMarkersPluginRef = useRef<any>(null);
+    const seriesMarkersPluginRef = useRef<SeriesMarkersPlugin | null>(null);
 
     // State management with proper typing
     const [chartState, setChartState] = useState<ChartState>({
@@ -554,22 +556,23 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         try {
           // Test if chart is still valid by checking a simple property
           chartRef.current.timeScale();
-        } catch (error) {
+        } catch {
           console.warn("Chart is disposed, skipping plotline segment creation");
           return;
         }
 
         // Clear existing segments with enhanced error handling
         if (plotlineSegmentsRef.current.length > 0) {
-          plotlineSegmentsRef.current.forEach((series, index) => {
+          plotlineSegmentsRef.current.forEach((series) => {
             try {
               if (chartRef.current && series) {
                 chartRef.current.removeSeries(series);
               }
-            } catch (error: any) {
+            } catch (error: unknown) {
               // Silently handle disposal errors
-              if (error?.message && !error.message.includes('disposed')) {
-                console.warn(`Error removing plotline segment ${index}:`, error.message);
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              if (errorMessage && !errorMessage.includes('disposed')) {
+                console.warn(`Error removing plotline segment:`, errorMessage);
               }
             }
           });
@@ -680,7 +683,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // Early return if required dependencies are not available
         if (
           !chartRef.current ||
-          !showDecisionTriangles ||
+          !showDecisionSignals ||
           !candlestickSeriesRef.current ||
           !chartData.length
         )
@@ -690,7 +693,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         try {
           // Test if chart is still valid by checking a simple property
           chartRef.current.timeScale();
-        } catch (error) {
+        } catch {
           console.warn("Chart is disposed, skipping decision triangles creation");
           return;
         }
@@ -702,7 +705,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (candlestickSeriesRef.current) {
               seriesMarkersPluginRef.current = createSeriesMarkers(
                 candlestickSeriesRef.current
-              );
+              ) as SeriesMarkersPlugin;
             } else {
               console.warn("Candlestick series not available for markers");
               return;
@@ -718,7 +721,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           );
 
           // Initialize markers array for both buy and sell signals
-          const markersData: any[] = [];
+          const markersData: unknown[] = [];
 
           // Create enhanced buy markers (upward triangles)
           buyDecisions.forEach((data) => {
@@ -749,14 +752,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           });
 
           // Apply markers to the chart with error handling
-          if (markersData.length > 0) {
+          if (markersData.length > 0 && seriesMarkersPluginRef.current) {
             seriesMarkersPluginRef.current.setMarkers(markersData);
 
             // Development logging for debugging purposes
             console.log(
               `✅ Triangle Markers Created: ${buyDecisions.length} BUY, ${sellDecisions.length} SELL from ${chartData.length} data points`
             );
-          } else {
+          } else if (seriesMarkersPluginRef.current) {
             // Clear markers if no decisions found
             seriesMarkersPluginRef.current.setMarkers([]);
             console.log("ℹ️ No decision markers to display");
@@ -765,7 +768,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           console.error("❌ Error creating decision triangles:", error);
         }
       },
-      [showDecisionTriangles, colors]
+      [showDecisionSignals, colors]
     );
 
     // Professional chart initialization with optimized options
@@ -1039,12 +1042,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         
         // Clean up plotline segments before disposing chart
         if (plotlineSegmentsRef.current.length > 0) {
-          plotlineSegmentsRef.current.forEach((series, index) => {
+          plotlineSegmentsRef.current.forEach((series) => {
             try {
               if (chartRef.current && series) {
                 chartRef.current.removeSeries(series);
               }
-            } catch (error) {
+            } catch {
               // Silently handle disposal errors during cleanup
             }
           });
@@ -1055,7 +1058,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         if (seriesMarkersPluginRef.current) {
           try {
             seriesMarkersPluginRef.current.setMarkers([]);
-          } catch (error) {
+          } catch {
             // Silently handle disposal errors during cleanup
           }
           seriesMarkersPluginRef.current = null;
@@ -1065,7 +1068,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         if (chartRef.current) {
           try {
             chartRef.current.remove();
-          } catch (error) {
+          } catch {
             // Silently handle disposal errors
           }
           chartRef.current = null;
@@ -1170,7 +1173,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // Note: Decision signals are now handled by triangle markers only
 
         // Create triangle markers from chart data decisions
-        if (showDecisionTriangles && chartRef.current) {
+        if (showDecisionSignals && chartRef.current) {
           createDecisionTriangles(chartData);
         }
 
@@ -1249,7 +1252,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       enableTwoScale,
       createColoredPlotlineSegments,
       createDecisionTriangles,
-      showDecisionTriangles,
+      showDecisionSignals,
+      showPlotline,
       colors,
     ]);
 
@@ -1273,7 +1277,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // BUG FIX: Additional safety check to prevent disposal errors
         try {
           chartRef.current.timeScale();
-        } catch (error) {
+        } catch {
           console.warn("Chart is disposed, skipping theme update");
           return;
         }
@@ -1423,7 +1427,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
-      } catch (error) {
+      } catch {
         console.warn("Chart is disposed, skipping plotline toggle");
         return;
       }
@@ -1434,16 +1438,17 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // Clear existing plotline segments without affecting chart view
       // BUG FIX: Enhanced error handling to prevent "Value is undefined" errors
       if (plotlineSegmentsRef.current.length > 0) {
-        plotlineSegmentsRef.current.forEach((series, index) => {
+        plotlineSegmentsRef.current.forEach((series) => {
           try {
             // Check if both chart and series are valid before removal
             if (chartRef.current && series) {
               chartRef.current.removeSeries(series);
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             // Silently handle disposal errors to prevent console spam
-            if (error?.message && !error.message.includes('disposed')) {
-              console.warn(`Error removing plotline segment ${index}:`, error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            if (errorMessage && !errorMessage.includes('disposed')) {
+              console.warn(`Error removing plotline segment:`, errorMessage);
             }
           }
         });
@@ -1459,7 +1464,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       restoreChartViewState(chartRef.current, viewState);
     }, [showPlotline, createColoredPlotlineSegments]);
 
-    // Handle showDecisionTriangles prop changes - toggle triangle markers visibility
+    // Handle showDecisionSignals prop changes - toggle triangle markers visibility
     // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
     useEffect(() => {
       if (
@@ -1472,7 +1477,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
-      } catch (error) {
+      } catch {
         console.warn("Chart is disposed, skipping decision triangles toggle");
         return;
       }
@@ -1480,7 +1485,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // Store current view state using utility function
       const viewState = preserveChartViewState(chartRef.current);
 
-      if (showDecisionTriangles) {
+      if (showDecisionSignals) {
         // Create triangle markers if enabled using chart data
         createDecisionTriangles(currentChartData.current);
       } else {
@@ -1493,7 +1498,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       // Restore exact view state using utility function
       restoreChartViewState(chartRef.current, viewState);
-    }, [showDecisionTriangles, createDecisionTriangles]);
+    }, [showDecisionSignals, createDecisionTriangles]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
     // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
@@ -1503,7 +1508,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
-      } catch (error) {
+      } catch {
         console.warn("Chart is disposed, skipping two-scale toggle");
         return;
       }

@@ -513,8 +513,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             className="w-full h-full dark:bg-gray-900"
             enableTwoScale={twoScaleEnabled} // Dual price scale functionality
             showPlotline={showPlotline} // RKB plotline indicator
-            showDecisionSignals={showDecisionSignals} // Decision line signals (deprecated)
-            showDecisionTriangles={true} // Enhanced triangle markers for BUYYES/SELLYES decisions
+            showDecisionSignals={showDecisionSignals} // Enhanced triangle markers for BUYYES/SELLYES decisions
           />
 
           {/* Stats Panel for Mobile */}

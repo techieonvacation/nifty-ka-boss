@@ -123,7 +123,7 @@ const CACHE_DURATION = {
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 
 // Request deduplication: Track ongoing requests to prevent duplicates
-const ongoingRequests = new Map<string, Promise<any>>();
+const ongoingRequests = new Map<string, Promise<unknown>>();
 
 // Global abort controllers for cleanup
 const abortControllers = new Map<string, AbortController>();
@@ -165,7 +165,7 @@ async function makeApiRequest<T>(
     // BUG FIX: Check if there's already an ongoing request for the same endpoint
     if (ongoingRequests.has(requestKey)) {
       console.log(`Reusing ongoing request for ${url}`);
-      return await ongoingRequests.get(requestKey);
+      return await ongoingRequests.get(requestKey) as T;
     }
 
     // BUG FIX: Clean up any existing abort controller for this request
@@ -214,9 +214,11 @@ async function makeApiRequest<T>(
         }
 
         return data;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // BUG FIX: Handle abort errors gracefully
-        if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+        const errorName = error instanceof Error ? error.name : '';
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorName === 'AbortError' || errorMessage?.includes('aborted')) {
           console.warn(`Request aborted for ${url} - this is normal during rapid navigation`);
           throw new Error('Request was cancelled');
         }
@@ -236,13 +238,14 @@ async function makeApiRequest<T>(
     
     return await requestPromise;
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Clean up on error
     ongoingRequests.delete(requestKey);
     abortControllers.delete(requestKey);
     
     // BUG FIX: Improve error messaging for abort errors
-    if (error.message === 'Request was cancelled') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Request was cancelled') {
       // Don't log cancelled requests as errors
       throw error;
     }
@@ -268,9 +271,10 @@ export async function fetchRkbData(): Promise<RkbDataPoint[]> {
     }
 
     return result.data || [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     // BUG FIX: Handle cancelled requests gracefully
-    if (error.message === 'Request was cancelled') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Request was cancelled') {
       console.log('RKB data request was cancelled - this is normal during rapid navigation');
       return []; // Return empty array instead of throwing
     }
@@ -301,9 +305,10 @@ export async function fetchDecisions(): Promise<DecisionData[]> {
     }
 
     return result.decisions || [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     // BUG FIX: Handle cancelled requests gracefully
-    if (error.message === 'Request was cancelled') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Request was cancelled') {
       console.log('Decisions data request was cancelled - this is normal during rapid navigation');
       return []; // Return empty array instead of throwing
     }
@@ -334,9 +339,10 @@ export async function fetchNiftyMovements(): Promise<NiftyMovementData[]> {
     }
 
     return result.data || [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     // BUG FIX: Handle cancelled requests gracefully
-    if (error.message === 'Request was cancelled') {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Request was cancelled') {
       console.log('Nifty movement data request was cancelled - this is normal during rapid navigation');
       return []; // Return empty array instead of throwing
     }
