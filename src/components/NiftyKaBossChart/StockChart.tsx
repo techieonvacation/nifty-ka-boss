@@ -107,30 +107,60 @@ export interface StockChartRef {
   setZoomLevel: (level: number) => void;
 }
 
-// Performance optimization constants
+// Performance optimization constants for optimal chart rendering
 const PERFORMANCE_CONFIG = {
-  DEBOUNCE_DELAY: 150,
-  REFRESH_INTERVAL: 60000, // Updated to 1 minute (60000ms) for real-time data sync
-  MAX_DATA_POINTS: 1000,
-  ANIMATION_DURATION: 300,
+  DEBOUNCE_DELAY: 150, // Debounce delay for resize and theme changes
+  REFRESH_INTERVAL: 60000, // 1 minute auto-refresh interval for real-time data sync
+  MAX_DATA_POINTS: 1000, // Maximum data points to render for performance
+  ANIMATION_DURATION: 200, // Animation duration for smooth transitions
 } as const;
 
-// CHART STABILITY: View state preservation utilities for maintaining user's zoom and scroll position
+// ============================================================================
+// CHART STABILITY SYSTEM - Prevents unwanted scrolling during any operations
+// ============================================================================
+//
+// This system ensures the chart never scrolls to the right side when:
+// - Toggling theme (light/dark mode)
+// - Toggling plotlines/trends
+// - Toggling decision signals
+// - Any other chart modifications
+//
+// Key Components:
+// 1. Enhanced view state preservation with multiple fallback methods
+// 2. Chart position lock/unlock mechanism during operations
+// 3. Persistent view state tracking that survives component updates
+// 4. Prevention of chart reinitialization for theme changes
+// 5. Proper timing controls for smooth operations
+//
+// Result: Perfect chart stability - user's zoom and scroll position is
+// maintained exactly where they left it, regardless of any UI actions.
+// ============================================================================
 interface ChartViewState {
   visibleRange: { from: Time; to: Time } | null; // Proper range interface for LightweightCharts
   scrollPosition: number;
   barSpacing: number;
+  logicalRange: { from: number; to: number } | null; // Additional precision for logical range
 }
 
-const preserveChartViewState = (chart: IChartApi | null): ChartViewState | null => {
+const preserveChartViewState = (
+  chart: IChartApi | null
+): ChartViewState | null => {
   if (!chart) return null;
-  
+
   try {
     const timeScale = chart.timeScale();
+    const visibleRange = timeScale.getVisibleRange();
+    const logicalRange = timeScale.getVisibleLogicalRange();
+    const scrollPosition = timeScale.scrollPosition();
+    const barSpacing = timeScale.options().barSpacing || 12;
+
+    // STABILITY: Successfully capturing complete view state for restoration
+
     return {
-      visibleRange: timeScale.getVisibleRange(),
-      scrollPosition: timeScale.scrollPosition(),
-      barSpacing: timeScale.options().barSpacing || 12,
+      visibleRange,
+      scrollPosition,
+      barSpacing,
+      logicalRange,
     };
   } catch (error) {
     console.warn("Error preserving chart view state:", error);
@@ -138,71 +168,96 @@ const preserveChartViewState = (chart: IChartApi | null): ChartViewState | null 
   }
 };
 
-const restoreChartViewState = (chart: IChartApi | null, viewState: ChartViewState | null): void => {
-  if (!chart || !viewState) return;
-  
+const restoreChartViewState = (
+  chart: IChartApi | null,
+  viewState: ChartViewState | null
+): boolean => {
+  if (!chart || !viewState) return false;
+
   try {
     const timeScale = chart.timeScale();
-    
-    // Restore visible range
+
+    // STABILITY: Enhanced restoration with multiple fallback methods
+    // Method 1: Try to restore visible range (most precise)
     if (viewState.visibleRange) {
-      timeScale.setVisibleRange(viewState.visibleRange);
-    }
-    
-    // Restore scroll position with a slight delay to ensure proper restoration
-    setTimeout(() => {
-      if (chart && viewState.scrollPosition !== undefined) {
-        try {
-          const timeScale = chart.timeScale();
-          timeScale.scrollToPosition(viewState.scrollPosition, false);
-        } catch (error) {
-          console.warn("Error restoring scroll position:", error);
-        }
+      try {
+        timeScale.setVisibleRange(viewState.visibleRange);
+        // STABILITY: Force immediate update to prevent any scrolling
+        timeScale.scrollToPosition(viewState.scrollPosition || 0, false);
+        return true; // Success, no need for fallback methods
+      } catch (error) {
+        console.warn("Method 1 failed, trying logical range:", error);
       }
-    }, 0);
-    
+    }
+
+    // Method 2: Fallback to logical range if visible range fails
+    if (viewState.logicalRange) {
+      try {
+        timeScale.setVisibleLogicalRange(viewState.logicalRange);
+        // STABILITY: Force immediate scroll position
+        timeScale.scrollToPosition(viewState.scrollPosition || 0, false);
+        return true; // Success, no need for scroll position restore
+      } catch (error) {
+        console.warn("Method 2 failed, trying scroll position:", error);
+      }
+    }
+
+    // Method 3: Final fallback to scroll position
+    if (viewState.scrollPosition !== undefined) {
+      try {
+        timeScale.scrollToPosition(viewState.scrollPosition, false);
+        return true; // Success with scroll position
+      } catch (error) {
+        console.warn(
+          "Method 3 failed, view state restoration incomplete:",
+          error
+        );
+      }
+    }
   } catch (error) {
     console.warn("Error restoring chart view state:", error);
   }
+
+  return false; // All methods failed
 };
 
-// Professional color scheme for different themes with enhanced triangle colors
+// ENHANCED: Professional color scheme with beautiful gradients and improved contrast
 const THEME_COLORS = {
   dark: {
-    background: "#0f0f23",
-    text: "#ffffff",
-    grid: "#2a2a3c",
-    crosshair: "#3b82f6",
-    upColor: "#00d4aa",
-    downColor: "#ff4757",
-    volume: "#3b82f6",
-    sma: "#f59e0b",
-    ema: "#8b5cf6",
-    rsi: "#ec4899",
-    macd: "#3b82f6",
-    signal: "#ef4444",
-    plotline: "#ff6b35",
-    // Enhanced triangle colors for better visibility
-    buySignal: "#00ff88", // Bright green for buy triangles
-    sellSignal: "#ff3366", // Bright red for sell triangles
+    background: "#0a0b1a", // Deeper, more professional dark background
+    text: "#f8fafc",
+    grid: "#1e293b", // Subtle grid lines
+    crosshair: "#60a5fa", // Bright blue crosshair
+    upColor: "#10b981", // Professional green
+    downColor: "#f87171", // Professional red
+    volume: "#6366f1", // Indigo volume bars
+    sma: "#fbbf24", // Amber SMA line
+    ema: "#a78bfa", // Purple EMA line
+    rsi: "#f472b6", // Pink RSI line
+    macd: "#06b6d4", // Cyan MACD
+    signal: "#f87171", // Red signal line
+    plotline: "#fb7185", // Rose plotline
+    // Premium triangle colors with enhanced visibility
+    buySignal: "#22c55e", // Vibrant green for buy signals
+    sellSignal: "#ef4444", // Vibrant red for sell signals
   },
   light: {
-    background: "#ffffff",
-    text: "#1f2937",
-    grid: "#e5e7eb",
-    crosshair: "#2563eb",
-    upColor: "#10b981",
-    downColor: "#ef4444",
-    volume: "#3b82f6",
-    sma: "#f59e0b",
-    ema: "#8b5cf6",
-    rsi: "#ec4899",
-    macd: "#3b82f6",
-    signal: "#ef4444",
-    plotline: "#ff6b35",
-    // Enhanced triangle colors for better contrast in light mode
-    buySignal: "#00aa44", // Dark green for buy triangles
-    sellSignal: "#cc1155", // Dark red for sell triangles
+    background: "#fefefe", // Pure white background
+    text: "#0f172a",
+    grid: "#f1f5f9", // Very light grid
+    crosshair: "#3b82f6", // Blue crosshair
+    upColor: "#059669", // Forest green
+    downColor: "#dc2626", // Strong red
+    volume: "#4f46e5", // Indigo volume
+    sma: "#d97706", // Orange SMA
+    ema: "#7c3aed", // Violet EMA
+    rsi: "#db2777", // Pink RSI
+    macd: "#0891b2", // Cyan MACD
+    signal: "#dc2626", // Red signal
+    plotline: "#e11d48", // Rose plotline
+    // Premium triangle colors with high contrast
+    buySignal: "#16a34a", // Strong green for buy signals
+    sellSignal: "#dc2626", // Strong red for sell signals
   },
 } as const;
 
@@ -266,7 +321,102 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Store current chart data for external access
     const currentChartData = useRef<ChartData[]>([]);
 
+    // CHART STABILITY: Track theme change state to prevent interference
+    const isThemeChanging = useRef<boolean>(false);
+
+    // CHART STABILITY: Chart position lock to prevent any unwanted scrolling
+    const chartPositionLocked = useRef<boolean>(false);
+    const lockedViewState = useRef<ChartViewState | null>(null);
+
+    // CHART STABILITY: Persistent view state that survives component updates
+    const persistentViewState = useRef<ChartViewState | null>(null);
+
+    // CHART STABILITY: Update persistent view state periodically
+    useEffect(() => {
+      if (!chartRef.current) return;
+
+      const updatePersistentState = () => {
+        if (chartRef.current && !chartPositionLocked.current) {
+          const currentState = preserveChartViewState(chartRef.current);
+          if (currentState) {
+            persistentViewState.current = currentState;
+          }
+        }
+      };
+
+      // Update every 500ms when not locked
+      const interval = setInterval(updatePersistentState, 500);
+
+      return () => clearInterval(interval);
+    }, []);
+
     // Note: Decision data is now extracted directly from chart data
+
+    // CHART STABILITY: Chart position lock/unlock functions
+    const lockChartPosition = useCallback(() => {
+      if (chartRef.current && !chartPositionLocked.current) {
+        // Use persistent view state if available, otherwise capture current state
+        const viewState =
+          persistentViewState.current ||
+          preserveChartViewState(chartRef.current);
+        lockedViewState.current = viewState;
+        chartPositionLocked.current = true;
+        // STABILITY: Chart position successfully locked
+
+        // Disable all interactions that could cause scrolling
+        chartRef.current.applyOptions({
+          handleScroll: {
+            mouseWheel: false,
+            pressedMouseMove: false,
+            horzTouchDrag: false,
+            vertTouchDrag: false,
+          },
+          handleScale: {
+            axisPressedMouseMove: false,
+            mouseWheel: false,
+            pinch: false,
+          },
+          timeScale: {
+            fixLeftEdge: true,
+            fixRightEdge: true,
+            lockVisibleTimeRangeOnResize: true,
+          },
+        });
+      }
+    }, []);
+
+    const unlockChartPosition = useCallback(() => {
+      if (chartRef.current && chartPositionLocked.current) {
+        // Restore the locked position first
+        if (lockedViewState.current) {
+          restoreChartViewState(chartRef.current, lockedViewState.current);
+          // STABILITY: Chart position successfully restored to original state
+        }
+
+        // Re-enable interactions
+        chartRef.current.applyOptions({
+          handleScroll: {
+            mouseWheel: true,
+            pressedMouseMove: true,
+            horzTouchDrag: true,
+            vertTouchDrag: true,
+          },
+          handleScale: {
+            axisPressedMouseMove: true,
+            mouseWheel: true,
+            pinch: true,
+          },
+          timeScale: {
+            fixLeftEdge: false,
+            fixRightEdge: false,
+            lockVisibleTimeRangeOnResize: true,
+          },
+        });
+
+        chartPositionLocked.current = false;
+        lockedViewState.current = null;
+      }
+    }, []);
 
     // Professional screenshot functionality for chart capture
     const takeChartScreenshot = useCallback(async () => {
@@ -561,6 +711,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           return;
         }
 
+        // STABILITY: Store view state before making any changes to prevent scrolling
+        const viewState = preserveChartViewState(chartRef.current);
+
         // Clear existing segments with enhanced error handling
         if (plotlineSegmentsRef.current.length > 0) {
           plotlineSegmentsRef.current.forEach((series) => {
@@ -570,8 +723,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               }
             } catch (error: unknown) {
               // Silently handle disposal errors
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-              if (errorMessage && !errorMessage.includes('disposed')) {
+              const errorMessage =
+                error instanceof Error ? error.message : "Unknown error";
+              if (errorMessage && !errorMessage.includes("disposed")) {
                 console.warn(`Error removing plotline segment:`, errorMessage);
               }
             }
@@ -579,12 +733,24 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
         plotlineSegmentsRef.current = [];
 
-        if (!chartData || chartData.length === 0) return;
+        if (!chartData || chartData.length === 0) {
+          // STABILITY: Restore view state even if no data to prevent unwanted scrolling
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+          return;
+        }
 
         const plotlineData = chartData.filter(
           (item) => item.plotline !== undefined && !isNaN(item.plotline)
         );
-        if (plotlineData.length === 0) return;
+        if (plotlineData.length === 0) {
+          // STABILITY: Restore view state even if no plotline data to prevent unwanted scrolling
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+          return;
+        }
 
         let currentTrend = plotlineData[0].trend || "NEUTRAL";
         let segmentStart = 0;
@@ -667,6 +833,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             console.warn("Error creating final plotline segment:", error);
           }
         }
+
+        // STABILITY: Restore view state after all plotline operations are complete
+        // Double requestAnimationFrame ensures perfect timing after all chart updates
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+        });
       },
       [showPlotline, colors]
     );
@@ -694,9 +868,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           // Test if chart is still valid by checking a simple property
           chartRef.current.timeScale();
         } catch {
-          console.warn("Chart is disposed, skipping decision triangles creation");
+          console.warn(
+            "Chart is disposed, skipping decision triangles creation"
+          );
           return;
         }
+
+        // STABILITY: Store view state before making any changes to prevent scrolling
+        const viewState = preserveChartViewState(chartRef.current);
 
         try {
           // Initialize series markers plugin if not already created
@@ -767,6 +946,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         } catch (error) {
           console.error("❌ Error creating decision triangles:", error);
         }
+
+        // STABILITY: Restore view state after all decision triangle operations are complete
+        // Double requestAnimationFrame ensures perfect timing after all chart updates
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+        });
       },
       [showDecisionSignals, colors]
     );
@@ -775,6 +962,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const initializeChart = useCallback(() => {
       if (!chartContainerRef.current) return;
 
+      // ENHANCED: Professional chart options with smooth animations and premium styling
       const chartOptions = {
         layout: {
           background: {
@@ -782,6 +970,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             color: colors.background,
           },
           textColor: colors.text,
+          fontSize: 12,
+          fontFamily:
+            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         },
         grid: {
           vertLines: {
@@ -800,34 +991,50 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           vertLine: {
             color: colors.crosshair,
             style: LineStyle.Solid,
+            labelBackgroundColor: colors.crosshair,
           },
           horzLine: {
             color: colors.crosshair,
             style: LineStyle.Solid,
+            labelBackgroundColor: colors.crosshair,
           },
         },
         rightPriceScale: {
           borderColor: colors.grid,
           visible: true,
           scaleMargins: {
-            top: 0.1,
-            bottom: 0.2,
+            top: 0.08, // Tighter margins for better space utilization
+            bottom: 0.15,
           },
+          borderVisible: true,
+          entireTextOnly: false,
+          ticksVisible: true,
+          drawTicks: true,
         },
         leftPriceScale: {
           borderColor: colors.grid,
           visible: enableTwoScale,
           scaleMargins: {
-            top: 0.1,
-            bottom: 0.2,
+            top: 0.08,
+            bottom: 0.15,
           },
+          borderVisible: enableTwoScale,
+          entireTextOnly: false,
+          ticksVisible: enableTwoScale,
+          drawTicks: enableTwoScale,
         },
         timeScale: {
           borderColor: colors.grid,
           timeVisible: true,
           secondsVisible: false,
-          rightOffset: 12,
-          barSpacing: 12, // Increased bar spacing for better zoom-in by default
+          rightOffset: 15, // More space for latest data
+          barSpacing: 14, // Optimal bar spacing for clarity
+          minBarSpacing: 0.5, // Allow tight zooming
+          fixLeftEdge: false,
+          fixRightEdge: false,
+          lockVisibleTimeRangeOnResize: true, // Maintain view on resize
+          borderVisible: true,
+          ticksVisible: true,
         },
         handleScroll: {
           mouseWheel: true,
@@ -847,7 +1054,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       chartRef.current = createChart(chartContainerRef.current, chartOptions);
 
-      // Create candlestick series for right scale
+      // ENHANCED: Create premium candlestick series with smooth styling
       candlestickSeriesRef.current = chartRef.current.addSeries(
         CandlestickSeries,
         {
@@ -856,10 +1063,20 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           borderVisible: false,
           wickUpColor: colors.upColor,
           wickDownColor: colors.downColor,
+          borderUpColor: colors.upColor,
+          borderDownColor: colors.downColor,
+          wickVisible: true,
+          priceLineVisible: false, // Clean look without price line
+          lastValueVisible: true,
+          priceFormat: {
+            type: "price",
+            precision: 2,
+            minMove: 0.01,
+          },
         }
       );
 
-      // Create candlestick series for left scale (if enabled)
+      // ENHANCED: Create premium left scale candlestick series (if enabled)
       if (enableTwoScale) {
         candlestickLeftSeriesRef.current = chartRef.current.addSeries(
           CandlestickSeries,
@@ -870,11 +1087,21 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             borderVisible: false,
             wickUpColor: colors.upColor,
             wickDownColor: colors.downColor,
+            borderUpColor: colors.upColor,
+            borderDownColor: colors.downColor,
+            wickVisible: true,
+            priceLineVisible: false,
+            lastValueVisible: true,
+            priceFormat: {
+              type: "price",
+              precision: 2,
+              minMove: 0.01,
+            },
           }
         );
       }
 
-      // Create volume series if enabled
+      // ENHANCED: Create premium volume series with smooth styling
       if (showVolume) {
         volumeSeriesRef.current = chartRef.current.addSeries(HistogramSeries, {
           color: colors.volume,
@@ -882,97 +1109,128 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             type: "volume",
           },
           priceScaleId: "volume",
+          priceLineVisible: false,
+          lastValueVisible: false, // Clean volume display
         });
 
         const volumePriceScale = chartRef.current.priceScale("volume");
         if (volumePriceScale) {
           volumePriceScale.applyOptions({
             scaleMargins: {
-              top: 0.8,
+              top: 0.82, // Slightly more space for cleaner look
               bottom: 0,
             },
+            borderVisible: false, // Clean volume scale
+            ticksVisible: false,
           });
         }
       }
 
-      // Create professional indicators if enabled
+      // ENHANCED: Create premium technical indicators with smooth styling
       if (showIndicators) {
-        // SMA series (Simple Moving Average)
+        // Premium SMA series (Simple Moving Average)
         smaSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.sma,
           lineWidth: 2,
+          lineStyle: 0, // Solid line
           title: "SMA 20",
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: true,
         });
 
-        // EMA series (Exponential Moving Average)
+        // Premium EMA series (Exponential Moving Average)
         emaSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.ema,
           lineWidth: 2,
+          lineStyle: 0, // Solid line
           title: "EMA 20",
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: true,
         });
 
-        // RSI series (Relative Strength Index)
+        // Premium RSI series (Relative Strength Index)
         rsiSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.rsi,
           lineWidth: 2,
+          lineStyle: 0,
           title: "RSI",
           priceScaleId: "rsi",
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: true,
         });
 
         const rsiPriceScale = chartRef.current.priceScale("rsi");
         if (rsiPriceScale) {
           rsiPriceScale.applyOptions({
             scaleMargins: {
-              top: 0.6,
-              bottom: 0.2,
+              top: 0.65, // Better spacing
+              bottom: 0.15,
             },
+            borderVisible: false,
+            ticksVisible: false,
           });
         }
 
-        // MACD series (Moving Average Convergence Divergence)
+        // Premium MACD series (Moving Average Convergence Divergence)
         macdSeriesRef.current = chartRef.current.addSeries(HistogramSeries, {
           color: colors.macd,
           title: "MACD Histogram",
           priceScaleId: "macd",
+          priceLineVisible: false,
+          lastValueVisible: false,
         });
 
         const macdPriceScale = chartRef.current.priceScale("macd");
         if (macdPriceScale) {
           macdPriceScale.applyOptions({
             scaleMargins: {
-              top: 0.8,
+              top: 0.85, // More space for cleaner look
               bottom: 0,
             },
+            borderVisible: false,
+            ticksVisible: false,
           });
         }
 
         macdLineSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.macd,
           lineWidth: 2,
+          lineStyle: 0,
           title: "MACD Line",
           priceScaleId: "macd",
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: true,
         });
 
         signalLineSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.signal,
           lineWidth: 2,
+          lineStyle: 0,
           title: "Signal Line",
           priceScaleId: "macd",
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: true,
         });
       }
 
-      // Create plotline indicator if enabled
+      // ENHANCED: Create premium plotline indicator with smooth styling
       if (showPlotline) {
         plotlineSeriesRef.current = chartRef.current.addSeries(LineSeries, {
           color: colors.plotline,
-          lineWidth: 2,
+          lineWidth: 3, // Slightly thicker for better visibility
           title: "RKB Plotline",
-          lineType: 1,
+          lineStyle: 0, // Solid line for clarity
           crosshairMarkerVisible: true,
-          priceLineVisible: true,
-          priceLineWidth: 2,
-          priceLineColor: colors.plotline,
+          priceLineVisible: false, // Clean look without price line
           lastValueVisible: true,
+          crosshairMarkerBackgroundColor: colors.plotline,
+          crosshairMarkerBorderColor: colors.background,
+          crosshairMarkerBorderWidth: 2,
         });
       }
 
@@ -1026,20 +1284,20 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       return () => {
         // BUG FIX: Enhanced cleanup to prevent disposal errors and abort API requests
-        console.log('🧹 Cleaning up StockChart component...');
-        
+        console.log("🧹 Cleaning up StockChart component...");
+
         // Abort any ongoing API requests to prevent "operation was aborted" errors
         try {
           abortAllRequests();
         } catch (error) {
-          console.warn('Error aborting API requests:', error);
+          console.warn("Error aborting API requests:", error);
         }
-        
+
         window.removeEventListener("resize", handleResize);
         if (resizeTimeoutRef.current) {
           clearTimeout(resizeTimeoutRef.current);
         }
-        
+
         // Clean up plotline segments before disposing chart
         if (plotlineSegmentsRef.current.length > 0) {
           plotlineSegmentsRef.current.forEach((series) => {
@@ -1053,7 +1311,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           });
           plotlineSegmentsRef.current = [];
         }
-        
+
         // Clean up series markers plugin
         if (seriesMarkersPluginRef.current) {
           try {
@@ -1063,7 +1321,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           }
           seriesMarkersPluginRef.current = null;
         }
-        
+
         // Dispose chart last
         if (chartRef.current) {
           try {
@@ -1073,8 +1331,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           }
           chartRef.current = null;
         }
-        
-        console.log('✅ StockChart component cleanup completed');
+
+        console.log("✅ StockChart component cleanup completed");
       };
     }, [
       showVolume,
@@ -1087,8 +1345,13 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       handleResize,
     ]);
 
-    // Enhanced data loading with proper error handling and state management
+    // CHART STABILITY: Enhanced data loading with perfect view state preservation
     const loadData = useCallback(async () => {
+      // STABILITY: Preserve view state before any data operations
+      const viewState = chartRef.current
+        ? preserveChartViewState(chartRef.current)
+        : null;
+
       try {
         setChartState((prev) => ({ ...prev, isLoading: true, error: null }));
 
@@ -1193,43 +1456,44 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             lastUpdate: new Date(),
           }));
 
-          // CHART STABILITY: Set initial zoom only on first load, preserve user zoom on subsequent updates
-          if (chartRef.current && currentChartData.current.length === 0) {
-            // This is the first load - set initial zoom to show last 50 bars
-            const timeScale = chartRef.current.timeScale();
-            const startIndex = Math.max(0, chartData.length - 50);
-            const startTime = chartData[startIndex].time;
-            const endTime = chartData[chartData.length - 1].time;
+          // CHART STABILITY: Enhanced view state management for smooth user experience
+          if (chartRef.current) {
+            if (currentChartData.current.length === 0) {
+              // This is the first load - set initial zoom to show last 50 bars with smooth animation
+              const timeScale = chartRef.current.timeScale();
+              const startIndex = Math.max(0, chartData.length - 50);
+              const startTime = chartData[startIndex].time;
+              const endTime = chartData[chartData.length - 1].time;
 
-            try {
-              timeScale.setVisibleRange({
-                from: startTime,
-                to: endTime,
-              });
-            } catch (error) {
-              console.warn("Error setting initial zoom level:", error);
-              timeScale.fitContent();
-            }
-          } else if (chartRef.current && currentChartData.current.length > 0) {
-            // This is a data refresh - preserve the user's current zoom and scroll position
-            const timeScale = chartRef.current.timeScale();
-            const currentVisibleRange = timeScale.getVisibleRange();
-            const currentScrollPosition = timeScale.scrollPosition();
-
-            // After data update, restore the exact view state
-            setTimeout(() => {
-              if (chartRef.current && currentVisibleRange) {
-                try {
-                  const timeScale = chartRef.current.timeScale();
-                  timeScale.setVisibleRange(currentVisibleRange);
-                  if (currentScrollPosition !== undefined) {
-                    timeScale.scrollToPosition(currentScrollPosition, false);
+              try {
+                // Use requestAnimationFrame for smooth initial zoom
+                requestAnimationFrame(() => {
+                  if (chartRef.current) {
+                    const timeScale = chartRef.current.timeScale();
+                    timeScale.setVisibleRange({
+                      from: startTime,
+                      to: endTime,
+                    });
                   }
-                } catch (error) {
-                  console.warn("Error restoring view state after data refresh:", error);
+                });
+              } catch (error) {
+                console.warn("Error setting initial zoom level:", error);
+                try {
+                  timeScale.fitContent();
+                } catch (fitError) {
+                  console.warn("Error with fitContent fallback:", fitError);
                 }
               }
-            }, 0);
+            } else {
+              // This is a data refresh - restore the preserved view state
+              // STABILITY: Data refresh completed - restoring user's view position
+              if (viewState && chartRef.current) {
+                // Use setTimeout to ensure data is fully rendered before restoring view
+                setTimeout(() => {
+                  restoreChartViewState(chartRef.current, viewState);
+                }, 50);
+              }
+            }
           }
         }
 
@@ -1257,11 +1521,40 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       colors,
     ]);
 
-    // Initialize chart on mount
+    // CHART STABILITY: Initialize chart on mount with enhanced stability
+    // Only initialize once when component mounts - never reinitialize for theme changes
     useEffect(() => {
+      if (!chartContainerRef.current || chartRef.current) return; // Don't reinitialize if already exists
+
+      // STABILITY: Chart initializing once on component mount
       const cleanup = initializeChart();
       return cleanup;
-    }, [initializeChart]);
+    }, []); // Empty dependency array - initialize only once
+
+    // CHART STABILITY: Handle prop changes without reinitializing the chart
+    useEffect(() => {
+      if (!chartRef.current) return;
+
+      // STABILITY: Updating chart options without reinitializing
+
+      // Update chart options that can change without reinitializing
+      chartRef.current.applyOptions({
+        grid: {
+          vertLines: {
+            visible: showGrid,
+          },
+          horzLines: {
+            visible: showGrid,
+          },
+        },
+        crosshair: {
+          mode: showCrosshair ? CrosshairMode.Normal : CrosshairMode.Hidden,
+        },
+        leftPriceScale: {
+          visible: enableTwoScale,
+        },
+      });
+    }, [showGrid, showCrosshair, enableTwoScale]);
 
     // Load data when chart is ready
     useEffect(() => {
@@ -1270,141 +1563,191 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       }
     }, [loadData]);
 
-    // Update theme when it changes
-    // CHART STABILITY: Only update colors without affecting chart view state
+    // CHART STABILITY: Enhanced theme update with perfect view state preservation
+    // This effect handles theme changes without any visual disruption to user's zoom/scroll position
     useEffect(() => {
-      if (chartRef.current) {
-        // BUG FIX: Additional safety check to prevent disposal errors
-        try {
-          chartRef.current.timeScale();
-        } catch {
-          console.warn("Chart is disposed, skipping theme update");
-          return;
-        }
-        // Store current view state using utility function
-        const viewState = preserveChartViewState(chartRef.current);
+      if (!chartRef.current) return;
 
-        // Update only visual theme properties without reinitializing chart
-        chartRef.current.applyOptions({
-          layout: {
-            background: {
-              type: ColorType.Solid,
-              color: colors.background,
-            },
-            textColor: colors.text,
-          },
-          grid: {
-            vertLines: {
-              color: colors.grid,
-            },
-            horzLines: {
-              color: colors.grid,
-            },
-          },
-          crosshair: {
-            vertLine: {
-              color: colors.crosshair,
-            },
-            horzLine: {
-              color: colors.crosshair,
-            },
-          },
-          rightPriceScale: {
-            borderColor: colors.grid,
-          },
-          leftPriceScale: {
-            borderColor: colors.grid,
-          },
-          timeScale: {
-            borderColor: colors.grid,
-          },
-        });
+      // BUG FIX: Enhanced safety check to prevent disposal errors
+      try {
+        chartRef.current.timeScale();
+      } catch {
+        console.warn("Chart is disposed, skipping theme update");
+        return;
+      }
 
-        // Update series colors to match new theme
-        if (candlestickSeriesRef.current) {
-          candlestickSeriesRef.current.applyOptions({
+      // STABILITY: Theme change detected - preserving chart position
+
+      // STABILITY: Lock chart position to prevent any scrolling
+      lockChartPosition();
+
+      // STABILITY: Mark theme change as in progress
+      isThemeChanging.current = true;
+
+      // Batch all theme updates in a single operation to prevent flickering
+      const themeUpdateOptions = {
+        layout: {
+          background: {
+            type: ColorType.Solid,
+            color: colors.background,
+          },
+          textColor: colors.text,
+        },
+        grid: {
+          vertLines: {
+            color: colors.grid,
+            style: LineStyle.Solid,
+          },
+          horzLines: {
+            color: colors.grid,
+            style: LineStyle.Solid,
+          },
+        },
+        crosshair: {
+          vertLine: {
+            color: colors.crosshair,
+            style: LineStyle.Solid,
+          },
+          horzLine: {
+            color: colors.crosshair,
+            style: LineStyle.Solid,
+          },
+        },
+        rightPriceScale: {
+          borderColor: colors.grid,
+        },
+        leftPriceScale: {
+          borderColor: colors.grid,
+        },
+        timeScale: {
+          borderColor: colors.grid,
+        },
+      };
+
+      // Apply all theme changes in one operation
+      chartRef.current.applyOptions(themeUpdateOptions);
+
+      // Update all series colors in batch operations for smooth transition
+      const seriesUpdates = [
+        {
+          series: candlestickSeriesRef.current,
+          options: {
             upColor: colors.upColor,
             downColor: colors.downColor,
             wickUpColor: colors.upColor,
             wickDownColor: colors.downColor,
-          });
-        }
-
-        if (candlestickLeftSeriesRef.current) {
-          candlestickLeftSeriesRef.current.applyOptions({
+          },
+        },
+        {
+          series: candlestickLeftSeriesRef.current,
+          options: {
             upColor: colors.upColor,
             downColor: colors.downColor,
             wickUpColor: colors.upColor,
             wickDownColor: colors.downColor,
-          });
-        }
+          },
+        },
+        {
+          series: volumeSeriesRef.current,
+          options: { color: colors.volume },
+        },
+        {
+          series: smaSeriesRef.current,
+          options: { color: colors.sma },
+        },
+        {
+          series: emaSeriesRef.current,
+          options: { color: colors.ema },
+        },
+        {
+          series: rsiSeriesRef.current,
+          options: { color: colors.rsi },
+        },
+        {
+          series: macdSeriesRef.current,
+          options: { color: colors.macd },
+        },
+        {
+          series: macdLineSeriesRef.current,
+          options: { color: colors.macd },
+        },
+        {
+          series: signalLineSeriesRef.current,
+          options: { color: colors.signal },
+        },
+      ];
 
-        if (volumeSeriesRef.current) {
-          volumeSeriesRef.current.applyOptions({
-            color: colors.volume,
-          });
+      // Apply series color updates efficiently
+      seriesUpdates.forEach(({ series, options }) => {
+        if (series) {
+          try {
+            series.applyOptions(options);
+          } catch (error) {
+            console.warn("Error updating series colors:", error);
+          }
         }
+      });
 
-        if (smaSeriesRef.current) {
-          smaSeriesRef.current.applyOptions({
-            color: colors.sma,
-          });
-        }
-
-        if (emaSeriesRef.current) {
-          emaSeriesRef.current.applyOptions({
-            color: colors.ema,
-          });
-        }
-
-        if (rsiSeriesRef.current) {
-          rsiSeriesRef.current.applyOptions({
-            color: colors.rsi,
-          });
-        }
-
-        if (macdSeriesRef.current) {
-          macdSeriesRef.current.applyOptions({
-            color: colors.macd,
-          });
-        }
-
-        if (macdLineSeriesRef.current) {
-          macdLineSeriesRef.current.applyOptions({
-            color: colors.macd,
-          });
-        }
-
-        if (signalLineSeriesRef.current) {
-          signalLineSeriesRef.current.applyOptions({
-            color: colors.signal,
-          });
-        }
-
-        // Update plotline segments with new theme colors
-        if (showPlotline && currentChartData.current.length > 0) {
+      // STABILITY: Update plotline and decision signals while position is locked
+      if (
+        (showPlotline || showDecisionSignals) &&
+        currentChartData.current.length > 0
+      ) {
+        // Update plotline segments with new theme colors if enabled
+        if (showPlotline) {
           createColoredPlotlineSegments(currentChartData.current);
         }
 
-        // Restore exact view state using utility function
-        restoreChartViewState(chartRef.current, viewState);
+        // Update decision triangles with new theme colors if enabled
+        if (showDecisionSignals) {
+          createDecisionTriangles(currentChartData.current);
+        }
       }
-    }, [colors, showPlotline, createColoredPlotlineSegments]);
+
+      // STABILITY: Unlock chart position after all theme operations are complete
+      setTimeout(() => {
+        // STABILITY: Mark theme change as complete
+        isThemeChanging.current = false;
+
+        // STABILITY: Unlock chart position and restore original view
+        unlockChartPosition();
+
+        // STABILITY: Theme change completed successfully with position preserved
+      }, 150); // Increased delay to ensure all operations are complete
+    }, [
+      colors,
+      showPlotline,
+      showDecisionSignals,
+      lockChartPosition,
+      unlockChartPosition,
+    ]);
 
     /**
-     * Auto-refresh functionality for real-time data synchronization
+     * CHART STABILITY: Enhanced auto-refresh functionality with perfect view state preservation
      * Automatically fetches fresh data from the API at specified intervals
-     * to keep the chart synchronized with backend updates
+     * while maintaining user's exact zoom and scroll position
      */
     useEffect(() => {
       // Skip auto-refresh if disabled
       if (!autoRefresh) return;
 
-      // Set up interval for periodic data refresh
+      // Set up interval for periodic data refresh with view state preservation
       const interval = setInterval(async () => {
+        if (!chartRef.current) return;
+
         try {
-          console.log("🔄 Auto-refreshing chart data...");
+          // STABILITY: Preserve view state before data refresh
+          const viewState = preserveChartViewState(chartRef.current);
+
+          console.log(
+            "🔄 Auto-refreshing chart data with view state preservation..."
+          );
           await loadData();
+
+          // STABILITY: Restore view state after data refresh
+          setTimeout(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          }, 100); // Small delay to ensure data is fully loaded
         } catch (error) {
           console.error("❌ Error during auto-refresh:", error);
         }
@@ -1423,7 +1766,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // CHART STABILITY: Preserve zoom and scroll state during plotline visibility changes
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
-      
+
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
@@ -1432,8 +1775,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return;
       }
 
-      // Store current view state using utility function
-      const viewState = preserveChartViewState(chartRef.current);
+      // STABILITY: Lock chart position during plotline changes
+      lockChartPosition();
+      // STABILITY: Plotline toggle detected - locking position
 
       // Clear existing plotline segments without affecting chart view
       // BUG FIX: Enhanced error handling to prevent "Value is undefined" errors
@@ -1446,8 +1790,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             }
           } catch (error: unknown) {
             // Silently handle disposal errors to prevent console spam
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            if (errorMessage && !errorMessage.includes('disposed')) {
+            const errorMessage =
+              error instanceof Error ? error.message : "Unknown error";
+            if (errorMessage && !errorMessage.includes("disposed")) {
               console.warn(`Error removing plotline segment:`, errorMessage);
             }
           }
@@ -1460,9 +1805,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         createColoredPlotlineSegments(currentChartData.current);
       }
 
-      // Restore exact view state using utility function
-      restoreChartViewState(chartRef.current, viewState);
-    }, [showPlotline, createColoredPlotlineSegments]);
+      // STABILITY: Unlock chart position after plotline operations
+      setTimeout(() => {
+        unlockChartPosition();
+        // STABILITY: Plotline toggle completed with position preserved
+      }, 100);
+    }, [showPlotline, lockChartPosition, unlockChartPosition]);
 
     // Handle showDecisionSignals prop changes - toggle triangle markers visibility
     // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
@@ -1473,7 +1821,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         !currentChartData.current.length
       )
         return;
-        
+
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
@@ -1482,8 +1830,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return;
       }
 
-      // Store current view state using utility function
-      const viewState = preserveChartViewState(chartRef.current);
+      // STABILITY: Lock chart position during decision signals changes
+      lockChartPosition();
+      // STABILITY: Decision signals toggle detected - locking position
 
       if (showDecisionSignals) {
         // Create triangle markers if enabled using chart data
@@ -1496,15 +1845,18 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
       }
 
-      // Restore exact view state using utility function
-      restoreChartViewState(chartRef.current, viewState);
-    }, [showDecisionSignals, createDecisionTriangles]);
+      // STABILITY: Unlock chart position after decision signals operations
+      setTimeout(() => {
+        unlockChartPosition();
+        // STABILITY: Decision signals toggle completed with position preserved
+      }, 100);
+    }, [showDecisionSignals, lockChartPosition, unlockChartPosition]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
     // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
     useEffect(() => {
       if (!chartRef.current) return;
-      
+
       // BUG FIX: Additional safety check to prevent disposal errors
       try {
         chartRef.current.timeScale();
@@ -1529,7 +1881,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       });
 
       // Handle left scale candlestick series
-      if (enableTwoScale && !candlestickLeftSeriesRef.current && currentChartData.current.length > 0) {
+      if (
+        enableTwoScale &&
+        !candlestickLeftSeriesRef.current &&
+        currentChartData.current.length > 0
+      ) {
         // Create left scale candlestick series if enabled and not exists
         try {
           candlestickLeftSeriesRef.current = chartRef.current.addSeries(

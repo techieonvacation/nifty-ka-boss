@@ -70,70 +70,51 @@ const Header = memo(function Header({
 }: HeaderProps) {
   const { data: session, status } = useSession(); // Get session data to check admin role
 
-  // Debug console logs for session and admin role
+  // Session validation for admin features
   React.useEffect(() => {
-    console.log("=== Header Component Debug ===");
-    console.log("Session status:", status);
-    console.log("Session data:", session);
-    console.log("User role:", session?.user?.role);
-    console.log("Is admin:", session?.user?.role === "admin");
-    console.log("User email:", session?.user?.email);
-    console.log("User name:", session?.user?.name);
-    console.log("=============================");
+    // Only log in development mode for debugging
+    if (process.env.NODE_ENV === "development") {
+      console.log("Header: Session loaded", { 
+        hasSession: !!session, 
+        role: session?.user?.role,
+        isAdmin: session?.user?.role === "admin"
+      });
+    }
   }, [session, status]);
 
-  // Additional debug for pivot management
-  React.useEffect(() => {
-    const isAdminUser = session?.user?.role === "admin";
-    if (isAdminUser) {
-      console.log("=== Admin Pivot Management Debug ===");
-      console.log("Symbol:", symbol);
-      console.log("Theme:", Theme);
-      console.log("===================================");
-    }
-  }, [session?.user?.role, symbol, Theme]);
-
-
-  // Auto-test admin login in development
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development" && !session) {
-      console.log("Development mode: Testing admin login...");
-      // testAdminLogin(); // Uncomment to auto-test
-    }
-  }, [session]);
-
-  const handleScreenshot = () => {
+  // CHART STABILITY: Enhanced screenshot handler with memoization
+  const handleScreenshot = React.useCallback(() => {
     setTakeSnapshot(true);
     // Auto-download functionality will be handled in the main component
-  };
+  }, [setTakeSnapshot]);
 
-  // CHART STABILITY: Optimized theme toggle to prevent unnecessary re-renders
-  const handleThemeToggle = () => {
+  // CHART STABILITY: Enhanced theme toggle with memoization to prevent unnecessary re-renders
+  const handleThemeToggle = React.useCallback(() => {
     // Pass the new theme state (opposite of current) to the parent
     // Theme is true when dark mode is active, so we want to toggle to light mode
     setTheme(!Theme);
-  };
+  }, [Theme, setTheme]);
 
-  // CHART STABILITY: Optimized two-scale toggle to prevent unnecessary re-renders
-  const handleTwoScaleToggle = () => {
+  // CHART STABILITY: Enhanced two-scale toggle with memoization to prevent unnecessary re-renders
+  const handleTwoScaleToggle = React.useCallback(() => {
     if (setTwoScaleEnabled) {
       setTwoScaleEnabled(!twoScaleEnabled);
     }
-  };
+  }, [twoScaleEnabled, setTwoScaleEnabled]);
 
-  // CHART STABILITY: Optimized decision signals toggle to prevent unnecessary re-renders
-  const handleDecisionSignalsToggle = () => {
+  // CHART STABILITY: Enhanced decision signals toggle with memoization to prevent unnecessary re-renders
+  const handleDecisionSignalsToggle = React.useCallback(() => {
     if (setShowDecisionSignals) {
       setShowDecisionSignals(!showDecisionSignals);
     }
-  };
+  }, [showDecisionSignals, setShowDecisionSignals]);
 
-  // CHART STABILITY: Optimized plotline toggle to prevent unnecessary re-renders
-  const handlePlotlineToggle = () => {
+  // CHART STABILITY: Enhanced plotline toggle with memoization to prevent unnecessary re-renders
+  const handlePlotlineToggle = React.useCallback(() => {
     if (setShowPlotline) {
       setShowPlotline(!showPlotline);
     }
-  };
+  }, [showPlotline, setShowPlotline]);
 
   // Check if user is admin
   const isAdmin = session?.user?.role === "admin";
