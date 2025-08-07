@@ -6,6 +6,8 @@ import {
   BarChart3,
   Eye,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   fetchNiftyMovements,
@@ -20,6 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/button";
 
 interface DataPanelProps {
   theme: boolean;
@@ -84,6 +87,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const [loadingAllDecisions, setLoadingAllDecisions] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [hasLoadedDecisions, setHasLoadedDecisions] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   // Fetch nifty movement data with optimized loading
   useEffect(() => {
@@ -154,6 +161,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
     if (open && !hasLoadedDecisions) {
       await fetchAllDecisions();
     }
+    // Reset pagination when opening dialog
+    if (open) {
+      setCurrentPage(1);
+    }
   };
 
   // Function to format decision data for display
@@ -171,19 +182,62 @@ const DataPanel: React.FC<DataPanelProps> = ({
       hour12: false,
     });
 
+    // Clean up decision text
+    let cleanDecision = decision.decision;
+    if (cleanDecision === "SELLYES") cleanDecision = "SELL";
+    if (cleanDecision === "BUYYES") cleanDecision = "BUY";
+
+    // Format H Date and L Date
+    const formatDateString = (dateString: string | undefined) => {
+      if (!dateString) return "N/A";
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }) + " " + date.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+      } catch {
+        return "N/A";
+      }
+    };
+
     return {
       date,
       time,
-      decision: decision.decision as "BUY" | "SELL",
+      decision: cleanDecision as "BUY" | "SELL",
       price: decision.close_x,
       has: decision.HighAfterSignal,
       las: decision.LowAfterSignal,
       favMoves: decision.FavourableMove,
       favMovesPercent: decision["Favourable%"],
-      hDate: decision.HighDate,
-      lDate: decision.LowDate,
+      hDate: formatDateString(decision.HighDate),
+      lDate: formatDateString(decision.LowDate),
       returns: decision.returns as "Profit" | "Loss",
     };
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(allDecisions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentDecisions = allDecisions.slice(startIndex, endIndex);
+
+  // Function to get row background color based on returns
+  const getRowBackgroundColor = (
+    returns: "Profit" | "Loss" | undefined,
+    favMoves: number
+  ) => {
+    if (returns === "Profit" || favMoves > 0) {
+      return theme ? "bg-green-50" : "bg-green-900/20";
+    } else if (returns === "Loss") {
+      return theme ? "bg-red-50" : "bg-red-900/20";
+    }
+    return "";
   };
 
   return (
@@ -596,12 +650,12 @@ const DataPanel: React.FC<DataPanelProps> = ({
                           Last 10 Years Nifty Ka Boss Decisions
                         </p>
                         <p className="text-sm text-gray-500">
-                          {allDecisions.length}
+                          {allDecisions.length} total decisions
                         </p>
                       </div>
 
                       {/* Scrollable Container */}
-                      <div className="overflow-x-auto max-h-[70vh] transition-all duration-300 ease-in-out">
+                      <div className="overflow-auto max-h-[60vh] transition-all duration-300 ease-in-out">
                         <div className="min-w-[800px]">
                           {/* Table Header */}
                           <div
@@ -628,17 +682,16 @@ const DataPanel: React.FC<DataPanelProps> = ({
                               theme ? "divide-gray-200" : "divide-gray-700"
                             }`}
                           >
-                            {allDecisions.map((decision, index) => {
+                            {currentDecisions.map((decision, index) => {
                               const formattedDecision =
                                 formatDecisionForDisplay(decision);
                               return (
                                 <div
                                   key={`${decision.datetime}-${index}`}
-                                  className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-all duration-200 ease-in-out ${
-                                    theme
-                                      ? "hover:bg-gray-100"
-                                      : "hover:bg-gray-700"
-                                  }`}
+                                  className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-all duration-200 ease-in-out ${getRowBackgroundColor(
+                                    formattedDecision.returns,
+                                    formattedDecision.favMoves
+                                  )}`}
                                 >
                                   <div className="min-w-[80px]">
                                     <div
@@ -723,16 +776,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                           : "text-gray-300"
                                       }`}
                                     >
-                                      {formattedDecision.hDate || "N/A"}
-                                    </div>
-                                    <div
-                                      className={`text-xs ${
-                                        theme
-                                          ? "text-gray-500"
-                                          : "text-gray-500"
-                                      }`}
-                                    >
-                                      {formattedDecision.time}
+                                      {formattedDecision.hDate}
                                     </div>
                                   </div>
                                   <div className="min-w-[80px]">
@@ -743,16 +787,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                           : "text-gray-300"
                                       }`}
                                     >
-                                      {formattedDecision.lDate || "N/A"}
-                                    </div>
-                                    <div
-                                      className={`text-xs ${
-                                        theme
-                                          ? "text-gray-500"
-                                          : "text-gray-500"
-                                      }`}
-                                    >
-                                      09:15
+                                      {formattedDecision.lDate}
                                     </div>
                                   </div>
                                   <div className="min-w-[70px] flex items-center">
@@ -774,6 +809,62 @@ const DataPanel: React.FC<DataPanelProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div
+                          className={`p-3 border-t flex items-center justify-between ${
+                            theme
+                              ? "border-gray-200 bg-gray-100"
+                              : "border-gray-700 bg-gray-900"
+                          }`}
+                        >
+                          <div
+                            className={`text-sm ${
+                              theme ? "text-gray-600" : "text-gray-400"
+                            }`}
+                          >
+                            Showing {startIndex + 1}-
+                            {Math.min(endIndex, allDecisions.length)} of{" "}
+                            {allDecisions.length} decisions
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setCurrentPage(Math.max(1, currentPage - 1))
+                              }
+                              disabled={currentPage === 1}
+                              className="flex items-center space-x-1"
+                            >
+                              <ChevronLeft size={16} />
+                              <span>Previous</span>
+                            </Button>
+                            <div
+                              className={`text-sm font-medium ${
+                                theme ? "text-gray-700" : "text-gray-300"
+                              }`}
+                            >
+                              Page {currentPage} of {totalPages}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setCurrentPage(
+                                  Math.min(totalPages, currentPage + 1)
+                                )
+                              }
+                              disabled={currentPage === totalPages}
+                              className="flex items-center space-x-1"
+                            >
+                              <span>Next</span>
+                              <ChevronRight size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center justify-center py-8">
@@ -842,9 +933,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     {lastDecisions.map((decision, index) => (
                       <div
                         key={index}
-                        className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-colors duration-200 ${
-                          theme ? "hover:bg-gray-100" : "hover:bg-gray-700"
-                        }`}
+                        className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-colors duration-200 ${getRowBackgroundColor(
+                          decision.returns,
+                          decision.favMoves
+                        )}`}
                       >
                         <div className="min-w-[80px]">
                           <div
@@ -917,14 +1009,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                               theme ? "text-gray-700" : "text-gray-300"
                             }`}
                           >
-                            {decision.hDate || "N/A"}
-                          </div>
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-500" : "text-gray-500"
-                            }`}
-                          >
-                            {decision.time}
+                            {decision.hDate}
                           </div>
                         </div>
                         <div className="min-w-[80px]">
@@ -933,14 +1018,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                               theme ? "text-gray-700" : "text-gray-300"
                             }`}
                           >
-                            {decision.lDate || "N/A"}
-                          </div>
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-500" : "text-gray-500"
-                            }`}
-                          >
-                            09:15
+                            {decision.lDate}
                           </div>
                         </div>
                         <div className="min-w-[70px] flex items-center">

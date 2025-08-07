@@ -149,7 +149,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     []
   );
 
-  // Load RKB data on component mount with optimized fetching
+  /**
+   * Load RKB data with auto-refresh functionality
+   * Fetches chart data, prices, and technical indicators from the API
+   * Auto-refreshes every minute to sync with backend data updates
+   */
   useEffect(() => {
     const loadRkbData = async () => {
       try {
@@ -158,17 +162,19 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         const chartData = convertRkbDataToChartData(data);
         setRkbData(chartData);
 
-        // Update current price from RKB data if available
+        // Update current price data from latest RKB data
         if (chartData.length > 0) {
           const latest = chartData[chartData.length - 1];
           const previous = chartData[chartData.length - 2];
 
+          // Calculate price changes for display
           setCurrentPrice(latest.close);
           setPriceChange(latest.close - previous.close);
           setPriceChangePercent(
             ((latest.close - previous.close) / previous.close) * 100
           );
 
+          // Update current candle data for data panel
           setCurrentCandleData({
             date: new Date(latest.time * 1000).toISOString().split("T")[0],
             open: latest.open,
@@ -179,26 +185,39 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
           });
         }
 
-        // Extract technical indicators from API response
+        // Extract and update technical indicators from API response
         if (data && data.length > 0) {
           const latestData = data[data.length - 1];
           setTechnicalIndicators((prev) => ({
             atr: latestData.atr || 0,
             S1: latestData.S1 || 0,
             R1: latestData.R1 || 0,
-            rkbSupport: prev.rkbSupport,
-            rkbResistance: prev.rkbResistance,
+            rkbSupport: prev.rkbSupport, // Preserve pivot data
+            rkbResistance: prev.rkbResistance, // Preserve pivot data
           }));
         }
       } catch (error) {
-        console.error("Error loading RKB data:", error);
-        // Don't set fallback data - keep loading state
+        console.error("❌ Error loading RKB data:", error);
+        // Don't set fallback data - keep loading state for user feedback
       } finally {
         setIsLoadingRkbData(false);
       }
     };
 
+    // Perform initial data load
     loadRkbData();
+
+    // Set up auto-refresh every minute (60000ms) for real-time data synchronization
+    const refreshInterval = setInterval(() => {
+      console.log("🔄 Auto-refreshing RKB data...");
+      loadRkbData();
+    }, 60000);
+
+    // Cleanup interval on component unmount to prevent memory leaks
+    return () => {
+      clearInterval(refreshInterval);
+      console.log("🛑 RKB data refresh interval cleared");
+    };
   }, []);
 
   // Load pivot data on component mount
@@ -231,7 +250,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     loadPivotData();
   }, [symbol]);
 
-  // Load decisions data on component mount with optimized fetching
+  /**
+   * Load decisions data with auto-refresh functionality
+   * Fetches trading decisions from the API and transforms them for display
+   * Auto-refreshes every minute to show latest decision data
+   */
   useEffect(() => {
     const loadDecisionsData = async () => {
       try {
@@ -323,7 +346,20 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
       }
     };
 
+    // Perform initial decisions data load
     loadDecisionsData();
+
+    // Set up auto-refresh every minute (60000ms) for real-time decisions synchronization
+    const decisionsRefreshInterval = setInterval(() => {
+      console.log("🔄 Auto-refreshing decisions data...");
+      loadDecisionsData();
+    }, 60000);
+
+    // Cleanup interval on component unmount to prevent memory leaks
+    return () => {
+      clearInterval(decisionsRefreshInterval);
+      console.log("🛑 Decisions data refresh interval cleared");
+    };
   }, []);
 
   // Theme toggle handler
@@ -443,7 +479,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
       />
 
       <div className="relative grid grid-cols-[70%_30%]">
-        {/* Stock Chart - Left Side */}
+        {/* Professional Stock Chart - Main Trading View */}
         <div className="relative flex-1">
           <StockChart
             ref={chartRef}
@@ -451,16 +487,17 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             exchange={exchange}
             interval={currentInterval}
             theme={theme}
-            showVolume={true}
-            showIndicators={false} // candleSignals is removed
-            showGrid={true}
-            showCrosshair={true}
+            showVolume={true} // Display volume histogram
+            showIndicators={false} // Technical indicators disabled for cleaner view
+            showGrid={true} // Show grid lines for better readability
+            showCrosshair={true} // Enable crosshair for precise value reading
             height={height}
             width={width}
             className="w-full h-full dark:bg-gray-900"
-            enableTwoScale={twoScaleEnabled}
-            showPlotline={showPlotline}
-            showDecisionSignals={showDecisionSignals}
+            enableTwoScale={twoScaleEnabled} // Dual price scale functionality
+            showPlotline={showPlotline} // RKB plotline indicator
+            showDecisionSignals={showDecisionSignals} // Decision line signals (deprecated)
+            showDecisionTriangles={true} // Enhanced triangle markers for BUYYES/SELLYES decisions
           />
 
           {/* Stats Panel for Mobile */}

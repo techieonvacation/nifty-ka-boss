@@ -20,6 +20,7 @@ import {
   CrosshairMode,
   LineStyle,
   UTCTimestamp,
+  createSeriesMarkers,
 } from "lightweight-charts";
 import {
   fetchRkbData,
@@ -43,6 +44,7 @@ interface StockChartProps {
   enableTwoScale?: boolean;
   showPlotline?: boolean;
   showDecisionSignals?: boolean;
+  showDecisionTriangles?: boolean;
   autoRefresh?: boolean;
   refreshInterval?: number;
 }
@@ -104,12 +106,12 @@ export interface StockChartRef {
 // Performance optimization constants
 const PERFORMANCE_CONFIG = {
   DEBOUNCE_DELAY: 150,
-  REFRESH_INTERVAL: 30000,
+  REFRESH_INTERVAL: 60000, // Updated to 1 minute (60000ms) for real-time data sync
   MAX_DATA_POINTS: 1000,
   ANIMATION_DURATION: 300,
 } as const;
 
-// Professional color scheme for different themes
+// Professional color scheme for different themes with enhanced triangle colors
 const THEME_COLORS = {
   dark: {
     background: "#0f0f23",
@@ -125,8 +127,9 @@ const THEME_COLORS = {
     macd: "#3b82f6",
     signal: "#ef4444",
     plotline: "#ff6b35",
-    buySignal: "#006400",
-    sellSignal: "#E75480",
+    // Enhanced triangle colors for better visibility
+    buySignal: "#00ff88", // Bright green for buy triangles
+    sellSignal: "#ff3366", // Bright red for sell triangles
   },
   light: {
     background: "#ffffff",
@@ -142,8 +145,9 @@ const THEME_COLORS = {
     macd: "#3b82f6",
     signal: "#ef4444",
     plotline: "#ff6b35",
-    buySignal: "#006400",
-    sellSignal: "#E75480",
+    // Enhanced triangle colors for better contrast in light mode
+    buySignal: "#00aa44", // Dark green for buy triangles
+    sellSignal: "#cc1155", // Dark red for sell triangles
   },
 } as const;
 
@@ -163,6 +167,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       enableTwoScale = true,
       showPlotline = true,
       showDecisionSignals = true,
+      showDecisionTriangles = true,
       autoRefresh = true,
       refreshInterval = PERFORMANCE_CONFIG.REFRESH_INTERVAL,
     },
@@ -184,7 +189,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const signalLineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSegmentsRef = useRef<ISeriesApi<"Line">[]>([]);
-    const decisionSignalsRef = useRef<ISeriesApi<"Line">[]>([]);
+    const seriesMarkersPluginRef = useRef<any>(null);
 
     // State management with proper typing
     const [chartState, setChartState] = useState<ChartState>({
@@ -206,6 +211,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // Store current chart data for external access
     const currentChartData = useRef<ChartData[]>([]);
+
+    // Note: Decision data is now extracted directly from chart data
 
     // Professional screenshot functionality for chart capture
     const takeChartScreenshot = useCallback(async () => {
@@ -314,6 +321,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
       }, PERFORMANCE_CONFIG.DEBOUNCE_DELAY);
     }, []);
+
+    // Note: Decision data is now extracted directly from RKB chart data
 
     // Enhanced RKB data loading with error handling and caching
     const loadRkbData = useCallback(async (): Promise<ChartData[]> => {
@@ -592,95 +601,89 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       [showPlotline, colors]
     );
 
-    // Enhanced decision signals with professional triangle indicators
-    const createDecisionSignals = useCallback(
+    // Note: Decision signals are now handled by triangle markers only - removed line series approach
+
+    /**
+     * Enhanced decision triangle markers using createSeriesMarkers plugin
+     * Creates professional triangle indicators for BUYYES and SELLYES decisions
+     * with optimized colors and positioning for maximum visibility
+     */
+    const createDecisionTriangles = useCallback(
       (chartData: ChartData[]) => {
+        // Early return if required dependencies are not available
         if (
           !chartRef.current ||
-          !showDecisionSignals ||
-          !chartContainerRef.current
+          !showDecisionTriangles ||
+          !candlestickSeriesRef.current ||
+          !chartData.length
         )
           return;
 
-        // Clear existing decision signals
-        decisionSignalsRef.current.forEach((series) => {
-          try {
-            if (chartRef.current && series) {
-              chartRef.current.removeSeries(series);
+        try {
+          // Initialize series markers plugin if not already created
+          if (!seriesMarkersPluginRef.current) {
+            seriesMarkersPluginRef.current = createSeriesMarkers(
+              candlestickSeriesRef.current
+            );
+          }
+
+          // Filter chart data for specific decision types
+          const buyDecisions = chartData.filter(
+            (data) => data.decision === "BUYYES"
+          );
+          const sellDecisions = chartData.filter(
+            (data) => data.decision === "SELLYES"
+          );
+
+          // Initialize markers array for both buy and sell signals
+          const markersData: any[] = [];
+
+          // Create enhanced buy markers (upward triangles)
+          buyDecisions.forEach((data) => {
+            if (data.time && data.close) {
+              markersData.push({
+                time: data.time,
+                position: "belowBar", // Position below candle for clear visibility
+                color: colors.buySignal, // Enhanced bright green color
+                shape: "arrowUp", // Upward pointing triangle
+                text: "BUY", // Hover text for identification
+                size: 1.5, // Increased size for better visibility
+              });
             }
-          } catch (error) {
-            console.warn("Error removing decision signal:", error);
+          });
+
+          // Create enhanced sell markers (downward triangles)
+          sellDecisions.forEach((data) => {
+            if (data.time && data.close) {
+              markersData.push({
+                time: data.time,
+                position: "aboveBar", // Position above candle for clear visibility
+                color: colors.sellSignal, // Enhanced bright red color
+                shape: "arrowDown", // Downward pointing triangle
+                text: "SELL", // Hover text for identification
+                size: 1.5, // Increased size for better visibility
+              });
+            }
+          });
+
+          // Apply markers to the chart with error handling
+          if (markersData.length > 0) {
+            seriesMarkersPluginRef.current.setMarkers(markersData);
+
+            // Development logging for debugging purposes
+            console.log(
+              `✅ Triangle Markers Created: ${buyDecisions.length} BUY, ${sellDecisions.length} SELL from ${chartData.length} data points`
+            );
+          } else {
+            // Clear markers if no decisions found
+            seriesMarkersPluginRef.current.setMarkers([]);
+            console.log("ℹ️ No decision markers to display");
           }
-        });
-        decisionSignalsRef.current = [];
-
-        if (!chartData || chartData.length === 0) return;
-
-        // Get decision signals from the data
-        const decisionSignals = getDecisionSignals(
-          chartData.map((data) => ({
-            ...data,
-            volume: data.volume || 0,
-          }))
-        );
-        if (decisionSignals.length === 0) return;
-
-        // Group signals by type for better visualization
-        const buySignals = decisionSignals.filter(
-          (signal) => signal.shape === "triangleUp"
-        );
-        const sellSignals = decisionSignals.filter(
-          (signal) => signal.shape === "triangleDown"
-        );
-
-        // Create buy signal series (triangle up)
-        if (buySignals.length > 0) {
-          try {
-            const buySeries = chartRef.current!.addSeries(LineSeries, {
-              color: colors.buySignal,
-              lineWidth: 1,
-
-              crosshairMarkerVisible: true,
-              priceLineVisible: false,
-              lastValueVisible: false,
-            });
-
-            const buyData = buySignals.map((signal) => ({
-              time: signal.time as UTCTimestamp,
-              value: signal.price + signal.price * 0.003,
-            }));
-
-            buySeries.setData(buyData);
-            decisionSignalsRef.current.push(buySeries);
-          } catch (error) {
-            console.warn("Error creating buy signals:", error);
-          }
-        }
-
-        // Create sell signal series (triangle down)
-        if (sellSignals.length > 0) {
-          try {
-            const sellSeries = chartRef.current!.addSeries(LineSeries, {
-              color: colors.sellSignal,
-              lineWidth: 1,
-              crosshairMarkerVisible: true,
-              priceLineVisible: false,
-              lastValueVisible: false,
-            });
-
-            const sellData = sellSignals.map((signal) => ({
-              time: signal.time as UTCTimestamp,
-              value: signal.price - signal.price * 0.003,
-            }));
-
-            sellSeries.setData(sellData);
-            decisionSignalsRef.current.push(sellSeries);
-          } catch (error) {
-            console.warn("Error creating sell signals:", error);
-          }
+        } catch (error) {
+          console.error("❌ Error creating decision triangles:", error);
         }
       },
-      [showDecisionSignals, colors]
+      [showDecisionTriangles, colors]
     );
 
     // Professional chart initialization with optimized options
@@ -1039,9 +1042,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           createColoredPlotlineSegments(chartData);
         }
 
-        // Set custom decision signals with triangle indicators
-        if (showDecisionSignals && chartRef.current) {
-          createDecisionSignals(chartData);
+        // Note: Decision signals are now handled by triangle markers only
+
+        // Create triangle markers from chart data decisions
+        if (showDecisionTriangles && chartRef.current) {
+          createDecisionTriangles(chartData);
         }
 
         // Update current price and change with proper calculations
@@ -1092,7 +1097,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       calculateMACD,
       enableTwoScale,
       createColoredPlotlineSegments,
-      createDecisionSignals,
+      createDecisionTriangles,
+      showDecisionTriangles,
       colors,
     ]);
 
@@ -1149,51 +1155,33 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       }
     }, [colors]);
 
-    // Auto-refresh functionality
+    /**
+     * Auto-refresh functionality for real-time data synchronization
+     * Automatically fetches fresh data from the API at specified intervals
+     * to keep the chart synchronized with backend updates
+     */
     useEffect(() => {
+      // Skip auto-refresh if disabled
       if (!autoRefresh) return;
 
+      // Set up interval for periodic data refresh
       const interval = setInterval(async () => {
         try {
+          console.log("🔄 Auto-refreshing chart data...");
           await loadData();
         } catch (error) {
-          console.error("Error during auto-refresh:", error);
+          console.error("❌ Error during auto-refresh:", error);
         }
       }, refreshInterval);
 
-      return () => clearInterval(interval);
+      // Cleanup interval on component unmount or dependency change
+      return () => {
+        clearInterval(interval);
+        console.log("🛑 Auto-refresh interval cleared");
+      };
     }, [autoRefresh, refreshInterval, loadData]);
 
-    // Handle showDecisionSignals prop changes - toggle decision signals visibility
-    useEffect(() => {
-      if (!chartRef.current || !currentChartData.current.length) return;
-
-      // Store current zoom level
-      const timeScale = chartRef.current.timeScale();
-      const visibleRange = timeScale.getVisibleRange();
-
-      // Clear existing decision signals
-      decisionSignalsRef.current.forEach((series) => {
-        try {
-          if (chartRef.current && series) {
-            chartRef.current.removeSeries(series);
-          }
-        } catch (error) {
-          console.warn("Error removing decision signal:", error);
-        }
-      });
-      decisionSignalsRef.current = [];
-
-      // Recreate decision signals if enabled
-      if (showDecisionSignals) {
-        createDecisionSignals(currentChartData.current);
-      }
-
-      // Restore zoom level
-      if (visibleRange) {
-        timeScale.setVisibleRange(visibleRange);
-      }
-    }, [showDecisionSignals, createDecisionSignals]);
+    // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
     // Handle showPlotline prop changes - toggle plotline segments visibility
     useEffect(() => {
@@ -1225,6 +1213,36 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         timeScale.setVisibleRange(visibleRange);
       }
     }, [showPlotline, createColoredPlotlineSegments]);
+
+    // Handle showDecisionTriangles prop changes - toggle triangle markers visibility
+    useEffect(() => {
+      if (
+        !chartRef.current ||
+        !candlestickSeriesRef.current ||
+        !currentChartData.current.length
+      )
+        return;
+
+      // Store current zoom level
+      const timeScale = chartRef.current.timeScale();
+      const visibleRange = timeScale.getVisibleRange();
+
+      if (showDecisionTriangles) {
+        // Create triangle markers if enabled using chart data
+        createDecisionTriangles(currentChartData.current);
+      } else {
+        // Remove markers plugin if disabled
+        if (seriesMarkersPluginRef.current) {
+          seriesMarkersPluginRef.current.setMarkers([]);
+          seriesMarkersPluginRef.current = null;
+        }
+      }
+
+      // Restore zoom level
+      if (visibleRange) {
+        timeScale.setVisibleRange(visibleRange);
+      }
+    }, [showDecisionTriangles, createDecisionTriangles]);
 
     return (
       <div className={`relative ${className}`}>
