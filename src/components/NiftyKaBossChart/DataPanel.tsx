@@ -53,8 +53,8 @@ interface DataPanelProps {
     atr: number;
     S1: number;
     R1: number;
-    rkbSupport?: number;
-    rkbResistance?: number;
+    rkbSupport?: number | undefined;
+    rkbResistance?: number | undefined;
   };
 }
 
@@ -495,7 +495,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 </div>
               </div>
 
-              {technicalIndicators.rkbSupport && (
+              {technicalIndicators.rkbSupport !== undefined && (
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div
                     className={`${theme ? "text-gray-700" : "text-gray-300"}`}
@@ -508,7 +508,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 </div>
               )}
 
-              {technicalIndicators.rkbResistance && (
+              {technicalIndicators.rkbResistance !== undefined && (
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div
                     className={`${theme ? "text-gray-700" : "text-gray-300"}`}

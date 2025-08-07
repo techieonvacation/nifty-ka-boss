@@ -100,8 +100,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     atr: 0,
     S1: 0,
     R1: 0,
-    rkbSupport: 0,
-    rkbResistance: 0,
+    rkbSupport: undefined as number | undefined,
+    rkbResistance: undefined as number | undefined,
   });
 
   // Chart ref for accessing chart methods
@@ -132,19 +132,22 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   }, [handleScreenshot]);
 
   // Handle pivot data updates
-  const handleSupportChange = useCallback((support: number) => {
-    setTechnicalIndicators(prev => ({
+  const handleSupportChange = useCallback((support: number | undefined) => {
+    setTechnicalIndicators((prev) => ({
       ...prev,
       rkbSupport: support,
     }));
   }, []);
 
-  const handleResistanceChange = useCallback((resistance: number) => {
-    setTechnicalIndicators(prev => ({
-      ...prev,
-      rkbResistance: resistance,
-    }));
-  }, []);
+  const handleResistanceChange = useCallback(
+    (resistance: number | undefined) => {
+      setTechnicalIndicators((prev) => ({
+        ...prev,
+        rkbResistance: resistance,
+      }));
+    },
+    []
+  );
 
   // Load RKB data on component mount with optimized fetching
   useEffect(() => {
@@ -179,13 +182,13 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         // Extract technical indicators from API response
         if (data && data.length > 0) {
           const latestData = data[data.length - 1];
-          setTechnicalIndicators({
+          setTechnicalIndicators((prev) => ({
             atr: latestData.atr || 0,
             S1: latestData.S1 || 0,
             R1: latestData.R1 || 0,
-            rkbSupport: technicalIndicators.rkbSupport,
-            rkbResistance: technicalIndicators.rkbResistance,
-          });
+            rkbSupport: prev.rkbSupport,
+            rkbResistance: prev.rkbResistance,
+          }));
         }
       } catch (error) {
         console.error("Error loading RKB data:", error);
@@ -204,11 +207,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
       try {
         const response = await fetch("/api/rkb/get-all-pivots");
         const data = await response.json();
-        
+
         if (data.success && data.pivots) {
-          const currentPivot = data.pivots.find((p: { symbol: string }) => p.symbol === symbol);
+          const activePivots = data.pivots.filter(
+            (p: { isdelete?: number }) => p.isdelete !== 1
+          );
+          const currentPivot = activePivots.find(
+            (p: { symbol: string }) => p.symbol === symbol
+          );
           if (currentPivot) {
-            setTechnicalIndicators(prev => ({
+            setTechnicalIndicators((prev) => ({
               ...prev,
               rkbSupport: currentPivot.support,
               rkbResistance: currentPivot.resistance,

@@ -11,8 +11,11 @@ const envSchema = z.object({
 // Pivot data validation schema
 const pivotDataSchema = z.object({
   symbol: z.string().min(1, "Symbol is required"),
-  support: z.number().positive("Support must be a positive number"),
-  resistance: z.number().positive("Resistance must be a positive number"),
+  support: z.number().positive("Support must be a positive number").optional(),
+  resistance: z.number().positive("Resistance must be a positive number").optional(),
+}).refine((data) => data.support !== undefined || data.resistance !== undefined, {
+  message: "At least one of support or resistance must be provided",
+  path: ["support", "resistance"],
 });
 
 // Structured error response format
@@ -160,8 +163,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       },
       body: JSON.stringify({
         symbol: pivotData.symbol,
-        support: pivotData.support,
-        resistance: pivotData.resistance,
+        ...(pivotData.support !== undefined && { support: pivotData.support }),
+        ...(pivotData.resistance !== undefined && { resistance: pivotData.resistance }),
       }),
       signal: controller.signal,
     });

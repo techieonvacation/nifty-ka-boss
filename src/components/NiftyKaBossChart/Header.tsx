@@ -41,8 +41,8 @@ interface HeaderProps {
   showPlotline?: boolean;
   setShowPlotline?: (visible: boolean) => void;
   onResetZoom?: () => void;
-  onSupportChange?: (support: number) => void;
-  onResistanceChange?: (resistance: number) => void;
+  onSupportChange?: (support: number | undefined) => void;
+  onResistanceChange?: (resistance: number | undefined) => void;
 }
 
 function Header({

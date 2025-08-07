@@ -10,7 +10,15 @@ const envSchema = z.object({
 
 // Update pivot data validation schema
 const updatePivotDataSchema = z.object({
-  isdelete: z.number().int().min(0).max(1, "isdelete must be 0 or 1"),
+  symbol: z.string().min(1, "Symbol is required").optional(),
+  support: z.number().positive("Support must be a positive number").optional(),
+  resistance: z.number().positive("Resistance must be a positive number").optional(),
+  isdelete: z.number().int().min(0).max(1, "isdelete must be 0 or 1").optional(),
+}).refine((data) => {
+  // At least one field should be provided for update
+  return data.symbol !== undefined || data.support !== undefined || data.resistance !== undefined || data.isdelete !== undefined;
+}, {
+  message: "At least one field must be provided for update",
 });
 
 // Structured error response format
@@ -175,7 +183,10 @@ export async function PUT(
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        isdelete: updateData.isdelete,
+        ...(updateData.symbol !== undefined && { symbol: updateData.symbol }),
+        ...(updateData.support !== undefined && { support: updateData.support }),
+        ...(updateData.resistance !== undefined && { resistance: updateData.resistance }),
+        ...(updateData.isdelete !== undefined && { isdelete: updateData.isdelete }),
       }),
       signal: controller.signal,
     });
