@@ -11,15 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {
-  Plus,
   Edit,
-  Trash2,
   Loader2,
   AlertCircle,
   CheckCircle,
-  X,
-  BarChart3,
 } from "lucide-react";
+import { MdAdd } from "react-icons/md";
 
 interface PivotData {
   id: number;
@@ -63,11 +60,13 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
       setError(null);
       const response = await fetch("/api/rkb/get-all-pivots");
       const data = await response.json();
-      
+
       if (data.success) {
         setPivots(data.pivots);
         // Find current symbol's pivot and update parent
-        const currentPivot = data.pivots.find((p: PivotData) => p.symbol === symbol);
+        const currentPivot = data.pivots.find(
+          (p: PivotData) => p.symbol === symbol
+        );
         if (currentPivot) {
           onSupportChange?.(currentPivot.support);
           onResistanceChange?.(currentPivot.resistance);
@@ -103,7 +102,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.support || !formData.resistance) {
       setError("Please fill in all fields");
       return;
@@ -128,15 +127,18 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
 
       if (editingPivot) {
         // Update existing pivot
-        const response = await fetch(`/api/rkb/update-pivot/${editingPivot.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            symbol: formData.symbol,
-            support,
-            resistance,
-          }),
-        });
+        const response = await fetch(
+          `/api/rkb/update-pivot/${editingPivot.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              symbol: formData.symbol,
+              support,
+              resistance,
+            }),
+          }
+        );
 
         const data = await response.json();
         if (data.success) {
@@ -196,35 +198,6 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
     setDialogOpen(true);
   };
 
-  // Handle delete with event prevention
-  const handleDelete = async (e: React.MouseEvent, pivotId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!confirm("Are you sure you want to delete this pivot?")) return;
-
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/rkb/update-pivot/${pivotId}`, {
-        method: "DELETE",
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setSuccess("Pivot deleted successfully");
-        fetchPivots();
-        setTimeout(() => setSuccess(null), 3000);
-      } else {
-        setError(data.message || "Failed to delete pivot");
-      }
-    } catch (err) {
-      setError("Failed to delete pivot");
-      console.error("Error deleting pivot:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle modal open with event prevention
   const handleOpenModal = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -233,7 +206,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
   };
 
   // Get current symbol's pivot
-  const currentPivot = pivots.find(p => p.symbol === symbol);
+  const currentPivot = pivots.find((p) => p.symbol === symbol);
 
   return (
     <>
@@ -242,60 +215,57 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
         variant="outline"
         size="sm"
         onClick={handleOpenModal}
-        className={`flex items-center space-x-2 ${
+        leftIcon={<MdAdd className="size-5" />}
+        className={`flex items-center  ${
           theme
             ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border-purple-700/30"
             : "bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300"
         }`}
       >
-        <BarChart3 size={14} />
-        <span>Manage Pivots</span>
+        RKB Pivot
       </Button>
-      
+
       {/* Comprehensive Modal Popup */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={`max-w-2xl max-h-[80vh] overflow-y-auto ${
-          theme 
-            ? "bg-white border-gray-200 text-gray-900" 
-            : "bg-gray-900 border-gray-700 text-white"
-        }`}>
+        <DialogContent
+          className={`max-w-2xl max-h-[80vh] overflow-y-auto ${
+            theme
+              ? "bg-white border-gray-200 text-gray-900"
+              : "bg-gray-900 border-gray-700 text-white"
+          }`}
+        >
           <DialogHeader className="relative">
-            <DialogTitle className={`text-xl font-bold ${
-              theme ? "text-gray-900" : "text-white"
-            }`}>
-              Pivot Management for {symbol}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                resetForm();
-                setDialogOpen(false);
-              }}
-              className="absolute right-0 top-0 p-1"
+            <DialogTitle
+              className={`text-xl font-bold text-center ${
+                theme ? "text-gray-900" : "text-white"
+              }`}
             >
-              <X size={16} />
-            </Button>
+              Add/Modify RKB Pivot
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
             {/* Current Pivot Section */}
             {currentPivot && (
-              <div className={`p-4 rounded-lg border ${
-                theme 
-                  ? "bg-green-50 border-green-200" 
-                  : "bg-green-900/20 border-green-700/30"
-              }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  theme
+                    ? "bg-green-50 border-green-200"
+                    : "bg-green-900/20 border-green-700/30"
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className={`text-lg font-medium ${
-                      theme ? "text-green-800" : "text-green-300"
-                    }`}>
+                    <div
+                      className={`text-lg font-medium ${
+                        theme ? "text-green-800" : "text-green-300"
+                      }`}
+                    >
                       Current Pivot for {symbol}
                     </div>
                     <div className="text-sm text-green-600 mt-1">
-                      Support: {currentPivot.support.toFixed(2)} | 
-                      Resistance: {currentPivot.resistance.toFixed(2)}
+                      Support: {currentPivot.support.toFixed(2)} | Resistance:{" "}
+                      {currentPivot.resistance.toFixed(2)}
                     </div>
                   </div>
                   <Button
@@ -310,127 +280,41 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
               </div>
             )}
 
-            {/* Add New Pivot Section */}
-            <div className={`p-4 rounded-lg border ${
-              theme 
-                ? "bg-blue-50 border-blue-200" 
-                : "bg-blue-900/20 border-blue-700/30"
-            }`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-medium ${
-                  theme ? "text-blue-800" : "text-blue-300"
-                }`}>
-                  Add New Pivot
-                </h3>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    resetForm();
-                    setDialogOpen(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus size={14} />
-                  Add New
-                </Button>
-              </div>
-            </div>
-
-            {/* All Pivots Section */}
-            <div className={`p-4 rounded-lg border ${
-              theme 
-                ? "bg-gray-50 border-gray-200" 
-                : "bg-gray-800 border-gray-700"
-            }`}>
-              <h3 className={`text-lg font-medium mb-4 ${
-                theme ? "text-gray-700" : "text-gray-300"
-              }`}>
-                All Pivots
-              </h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {loading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="animate-spin" size={16} />
-                  </div>
-                ) : pivots.length > 0 ? (
-                  pivots.map((pivot) => (
-                    <div
-                      key={pivot.id}
-                      className={`flex items-center justify-between p-3 rounded border ${
-                        theme 
-                          ? "bg-white border-gray-200" 
-                          : "bg-gray-700 border-gray-600"
-                      }`}
-                    >
-                      <div>
-                        <div className={`text-sm font-medium ${
-                          theme ? "text-gray-900" : "text-white"
-                        }`}>
-                          {pivot.symbol}
-                        </div>
-                        <div className={`text-xs ${
-                          theme ? "text-gray-600" : "text-gray-400"
-                        }`}>
-                          S: {pivot.support.toFixed(2)} | R: {pivot.resistance.toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => handleEdit(e, pivot)}
-                          className="text-xs p-1"
-                        >
-                          <Edit size={12} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => handleDelete(e, pivot.id)}
-                          className="text-xs p-1 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={12} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className={`text-sm text-center py-4 ${
-                    theme ? "text-gray-500" : "text-gray-400"
-                  }`}>
-                    No pivots found
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Add/Edit Form */}
             {(editingPivot || !currentPivot) && (
-              <div className={`p-4 rounded-lg border ${
-                theme 
-                  ? "bg-yellow-50 border-yellow-200" 
-                  : "bg-yellow-900/20 border-yellow-700/30"
-              }`}>
-                <h3 className={`text-lg font-medium mb-4 ${
-                  theme ? "text-yellow-800" : "text-yellow-300"
-                }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  theme
+                    ? "bg-yellow-50 border-yellow-200"
+                    : "bg-yellow-900/20 border-yellow-700/30"
+                }`}
+              >
+                <h3
+                  className={`text-lg font-medium mb-4 ${
+                    theme ? "text-yellow-800" : "text-yellow-300"
+                  }`}
+                >
                   {editingPivot ? "Edit Pivot" : "Add New Pivot"}
                 </h3>
-                
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="symbol" className={`${
-                      theme ? "text-gray-700" : "text-gray-300"
-                    }`}>
+                    <Label
+                      htmlFor="symbol"
+                      className={`${theme ? "text-gray-700" : "text-gray-300"}`}
+                    >
                       Symbol
                     </Label>
                     <Input
                       id="symbol"
+                      readOnly
                       value={formData.symbol}
-                      onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, symbol: e.target.value })
+                      }
                       className={`${
-                        theme 
-                          ? "bg-white border-gray-300 text-gray-900" 
+                        theme
+                          ? "bg-white border-gray-300 text-gray-900"
                           : "bg-gray-800 border-gray-600 text-white"
                       }`}
                       required
@@ -438,9 +322,10 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                   </div>
 
                   <div>
-                    <Label htmlFor="support" className={`${
-                      theme ? "text-gray-700" : "text-gray-300"
-                    }`}>
+                    <Label
+                      htmlFor="support"
+                      className={`${theme ? "text-gray-700" : "text-gray-300"}`}
+                    >
                       Support
                     </Label>
                     <Input
@@ -448,10 +333,12 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                       type="number"
                       step="0.01"
                       value={formData.support}
-                      onChange={(e) => setFormData({ ...formData, support: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, support: e.target.value })
+                      }
                       className={`${
-                        theme 
-                          ? "bg-white border-gray-300 text-gray-900" 
+                        theme
+                          ? "bg-white border-gray-300 text-gray-900"
                           : "bg-gray-800 border-gray-600 text-white"
                       }`}
                       required
@@ -459,9 +346,10 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                   </div>
 
                   <div>
-                    <Label htmlFor="resistance" className={`${
-                      theme ? "text-gray-700" : "text-gray-300"
-                    }`}>
+                    <Label
+                      htmlFor="resistance"
+                      className={`${theme ? "text-gray-700" : "text-gray-300"}`}
+                    >
                       Resistance
                     </Label>
                     <Input
@@ -469,10 +357,12 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                       type="number"
                       step="0.01"
                       value={formData.resistance}
-                      onChange={(e) => setFormData({ ...formData, resistance: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, resistance: e.target.value })
+                      }
                       className={`${
-                        theme 
-                          ? "bg-white border-gray-300 text-gray-900" 
+                        theme
+                          ? "bg-white border-gray-300 text-gray-900"
                           : "bg-gray-800 border-gray-600 text-white"
                       }`}
                       required
@@ -501,8 +391,10 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                     >
                       {loading ? (
                         <Loader2 className="animate-spin" size={14} />
+                      ) : editingPivot ? (
+                        "Update"
                       ) : (
-                        editingPivot ? "Update" : "Add"
+                        "Add"
                       )}
                     </Button>
                     <Button
@@ -526,4 +418,4 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
   );
 };
 
-export default PivotManagement; 
+export default PivotManagement;

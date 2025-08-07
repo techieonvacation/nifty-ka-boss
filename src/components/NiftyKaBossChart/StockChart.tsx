@@ -538,7 +538,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 const segmentSeries = chartRef.current!.addSeries(LineSeries, {
                   color,
                   lineWidth: 2,
-                  title: `RKB Plotline ${currentTrend}`,
                   lineType: 2,
                   crosshairMarkerVisible: true,
                   priceLineVisible: false,
@@ -564,9 +563,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             value: item.plotline!,
           }));
 
-          const trendUpper = (
-            plotlineData[plotlineData.length - 1].trend || "NEUTRAL"
-          ).toUpperCase();
+          const trendUpper = (currentTrend || "NEUTRAL").toUpperCase();
           const color =
             trendUpper === "BUY"
               ? colors.buySignal
@@ -578,7 +575,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             const segmentSeries = chartRef.current!.addSeries(LineSeries, {
               color,
               lineWidth: 2,
-              title: `RKB Plotline ${currentTrend}`,
+
               lineType: 2,
               crosshairMarkerVisible: true,
               priceLineVisible: false,
@@ -642,7 +639,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             const buySeries = chartRef.current!.addSeries(LineSeries, {
               color: colors.buySignal,
               lineWidth: 1,
-              title: "BUY Signals",
+
               crosshairMarkerVisible: true,
               priceLineVisible: false,
               lastValueVisible: false,
@@ -666,7 +663,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             const sellSeries = chartRef.current!.addSeries(LineSeries, {
               color: colors.sellSignal,
               lineWidth: 1,
-              title: "SELL Signals",
               crosshairMarkerVisible: true,
               priceLineVisible: false,
               lastValueVisible: false,
@@ -772,7 +768,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           borderVisible: false,
           wickUpColor: colors.upColor,
           wickDownColor: colors.downColor,
-          title: "Price (Right)",
         }
       );
 
@@ -787,7 +782,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             borderVisible: false,
             wickUpColor: colors.upColor,
             wickDownColor: colors.downColor,
-            title: "Price (Left)",
           }
         );
       }
@@ -1321,7 +1315,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           )}
 
           {/* Current Price Indicator */}
-          {chartState.currentPrice && (
+          {/* {chartState.currentPrice && (
             <div
               className={`px-3 py-1 rounded-lg shadow-lg font-urbanist flex items-center gap-x-2 ${
                 theme === "dark"
@@ -1346,10 +1340,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
           {/* Trend Indicator */}
-          {chartState.currentTrend && (
+          {/* {chartState.currentTrend && (
             <div
               className={`px-3 py-1 rounded-lg shadow-lg flex items-center gap-x-2 font-urbanist ${
                 theme === "dark"
@@ -1370,7 +1364,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 {chartState.currentTrend}
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Professional chart container */}
