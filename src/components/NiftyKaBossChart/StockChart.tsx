@@ -1184,14 +1184,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
     // Handle showPlotline prop changes - toggle plotline segments visibility
+    // CHART STABILITY: Preserve zoom and scroll state during plotline visibility changes
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
 
-      // Store current zoom level
+      // Store current view state to preserve user's zoom and scroll position
       const timeScale = chartRef.current.timeScale();
       const visibleRange = timeScale.getVisibleRange();
+      const scrollPosition = timeScale.scrollPosition();
 
-      // Clear existing plotline segments
+      // Clear existing plotline segments without affecting chart view
       plotlineSegmentsRef.current.forEach((series) => {
         try {
           if (chartRef.current && series) {
@@ -1208,9 +1210,17 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         createColoredPlotlineSegments(currentChartData.current);
       }
 
-      // Restore zoom level
+      // Restore exact view state to maintain chart stability
       if (visibleRange) {
-        timeScale.setVisibleRange(visibleRange);
+        try {
+          timeScale.setVisibleRange(visibleRange);
+          // Additional scroll position restoration for pixel-perfect stability
+          if (scrollPosition !== undefined) {
+            timeScale.scrollToPosition(scrollPosition, false);
+          }
+        } catch (error) {
+          console.warn("Error restoring chart view state:", error);
+        }
       }
     }, [showPlotline, createColoredPlotlineSegments]);
 
