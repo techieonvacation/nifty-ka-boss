@@ -55,6 +55,10 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   enableTwoScale = true, // Default to true for two-scale feature
 }) => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+
+  // DECISION CLICK INTEGRATION: State for managing decision popup dialog and highlighting
+  const [decisionDialogOpen, setDecisionDialogOpen] = useState(false);
+  const [highlightedDecisionDatetime, setHighlightedDecisionDatetime] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showStatsPanel, setShowStatsPanel] = useState(false);
   const [currentInterval] = useState(interval);
@@ -67,15 +71,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   const [currentPrice, setCurrentPrice] = useState<number>(24844.55);
   const [priceChange, setPriceChange] = useState<number>(14.15);
   const [priceChangePercent, setPriceChangePercent] = useState<number>(0.06);
+  // REAL-TIME FIX: Set initial state with current datetime to avoid showing old dates
   const [currentCandleData, setCurrentCandleData] = useState({
-    date: "2025-07-30",
+    date: "Loading...", // Will be updated with real API datetime
     open: 24859.5,
     high: 24860.45,
     low: 24840.75,
     close: 24844.55,
     volume: 21500000,
   });
-  const [rkbData, setRkbData] = useState<ChartDataPoint[]>([]);
+  const [, setRkbData] = useState<ChartDataPoint[]>([]);
   const [, setIsLoadingRkbData] = useState(false);
 
   // Real decisions data state
@@ -127,6 +132,29 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     }
   }, []);
 
+  // DECISION CLICK INTEGRATION: Handler for when decision triangles are clicked
+  const handleDecisionClick = useCallback((decisionData: {
+    decision: "BUY" | "SELL";
+    datetime: string;
+    price: number;
+    time: number;
+  }) => {
+    console.log("🎯 Decision triangle clicked in parent:", decisionData);
+    console.log("🔍 DEBUG - Triangle datetime format:", `"${decisionData.datetime}"`);
+    console.log("🔍 DEBUG - Triangle datetime length:", decisionData.datetime.length);
+    console.log("🔍 DEBUG - Triangle datetime type:", typeof decisionData.datetime);
+    
+    // Set the datetime to highlight and open the decision dialog
+    setHighlightedDecisionDatetime(decisionData.datetime);
+    setDecisionDialogOpen(true);
+  }, []);
+
+  // DECISION CLICK INTEGRATION: Handler for closing the decision dialog
+  const handleDecisionDialogClose = useCallback(() => {
+    setDecisionDialogOpen(false);
+    setHighlightedDecisionDatetime(""); // Clear highlighting
+  }, []);
+
   // Screenshot handler for Header component
   const handleScreenshotForHeader = useCallback(() => {
     handleScreenshot();
@@ -159,8 +187,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     const loadRkbData = async () => {
       try {
         setIsLoadingRkbData(true);
-        const data = await fetchRkbData();
+        // REAL-TIME FIX: Use cache busting for more aggressive real-time updates
+        const data = await fetchRkbData(true); // Force fresh data for trading charts
         const chartData = convertRkbDataToChartData(data);
+        
+        // REAL-TIME FIX: Log API data info for debugging datetime issues
+        if (data.length > 0) {
+          const latestApiData = data[data.length - 1];
+          console.log(`📊 API Response - Latest candle: ${latestApiData.datetime}, Total candles: ${data.length}`);
+        }
+        
         setRkbData(chartData);
 
         // Update current price data from latest RKB data
@@ -175,9 +211,12 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             ((latest.close - previous.close) / previous.close) * 100
           );
 
-          // Update current candle data for data panel
+          // DATETIME FIX: Update current candle data preserving original datetime format
+          const candleDateTime = latest.originalDatetime || new Date(latest.time * 1000).toISOString().split("T")[0];
+          console.log(`🕐 Updating candle datetime from API: ${candleDateTime} (was: ${currentCandleData.date})`);
+          
           setCurrentCandleData({
-            date: new Date(latest.time * 1000).toISOString().split("T")[0],
+            date: candleDateTime,
             open: latest.open,
             high: latest.high,
             low: latest.low,
@@ -208,11 +247,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // Perform initial data load
     loadRkbData();
 
-    // Set up auto-refresh every minute (60000ms) for real-time data synchronization
+    // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time data synchronization
     const refreshInterval = setInterval(() => {
-      console.log("🔄 Auto-refreshing RKB data...");
+      console.log(`🔄 Auto-refreshing RKB data at ${new Date().toLocaleTimeString()}...`);
       loadRkbData();
-    }, 60000);
+    }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
 
     // Cleanup interval on component unmount to prevent memory leaks
     return () => {
@@ -266,53 +305,44 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     const loadDecisionsData = async () => {
       try {
         setIsLoadingDecisions(true);
-        const decisions = await fetchDecisions();
+        // REAL-TIME FIX: Use cache busting for fresh decision data
+        const decisions = await fetchDecisions(true); // Force fresh data for trading decisions
 
-        // Transform decisions data to match component format
+        // DATETIME FIX: Transform decisions data preserving original datetime formats from API
         const transformedDecisions = decisions
           .slice(0, 5) // Show only last 5 decisions
           .map((item: DecisionData) => {
-            // Helper function to format date from GMT string
-            const formatDateFromGMT = (
-              gmtString: string
-            ): { date: string; time: string } => {
-              try {
-                let date: Date;
-                if (gmtString.includes("GMT")) {
-                  date = new Date(gmtString);
-                } else {
-                  date = new Date(gmtString);
+            // DATETIME FIX: Helper function to clean GMT strings by removing " GMT" suffix only
+            // This preserves the exact datetime format from API but removes trailing GMT
+            const cleanDateTimeString = (dateString: string): string => {
+              if (!dateString) return "N/A";
+              // Remove only the " GMT" suffix if present, keep everything else as-is
+              return dateString.replace(/ GMT$/, "");
+            };
+
+            // DATETIME FIX: Helper function to split datetime into date and time parts
+            // This handles both formats: "2015-01-09 09:15" and "Thu, 24 Jul 2025 11:15:00"
+            const splitDateTime = (dateTimeString: string): { date: string; time: string } => {
+              const cleaned = cleanDateTimeString(dateTimeString);
+              
+              // Handle format like "Thu, 24 Jul 2025 11:15:00"
+              if (cleaned.includes(",")) {
+                const parts = cleaned.split(" ");
+                if (parts.length >= 5) {
+                  const datePart = parts.slice(0, 4).join(" "); // "Thu, 24 Jul 2025"
+                  const timePart = parts[4] || "00:00:00"; // "11:15:00"
+                  return { date: datePart, time: timePart };
                 }
-
-                if (isNaN(date.getTime())) {
-                  return { date: "Invalid Date", time: "00:00" };
-                }
-
-                const dateStr = `${date
-                  .getUTCDate()
-                  .toString()
-                  .padStart(2, "0")} ${
-                  date
-                    .toLocaleDateString("en-GB", {
-                      month: "short",
-                      year: "numeric",
-                    })
-                    .split(" ")[1]
-                }`;
-
-                const timeStr = `${date
-                  .getUTCHours()
-                  .toString()
-                  .padStart(2, "0")}:${date
-                  .getUTCMinutes()
-                  .toString()
-                  .padStart(2, "0")}`;
-
-                return { date: dateStr, time: timeStr };
-              } catch (error) {
-                console.error("Error formatting date:", error);
-                return { date: "Invalid Date", time: "00:00" };
               }
+              
+              // Handle format like "2015-01-09 09:15"
+              if (cleaned.includes(" ")) {
+                const [datePart, timePart] = cleaned.split(" ");
+                return { date: datePart || "N/A", time: timePart || "00:00" };
+              }
+              
+              // Fallback: treat entire string as date
+              return { date: cleaned, time: "00:00" };
             };
 
             // Helper function to determine decision type
@@ -323,9 +353,10 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
               return "BUY"; // Default fallback
             };
 
-            const { date, time } = formatDateFromGMT(item.datetime);
-            const { date: hDate } = formatDateFromGMT(item.HighDate);
-            const { date: lDate } = formatDateFromGMT(item.LowDate);
+            // DATETIME FIX: Use original datetime strings without transformation
+            const { date, time } = splitDateTime(item.datetime);
+            const { date: hDate } = splitDateTime(item.HighDate);
+            const { date: lDate } = splitDateTime(item.LowDate);
             const returns = item.FavourableMove > 0 ? "Profit" : "Loss";
 
             return {
@@ -356,11 +387,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // Perform initial decisions data load
     loadDecisionsData();
 
-    // Set up auto-refresh every minute (60000ms) for real-time decisions synchronization
+    // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time decisions synchronization
     const decisionsRefreshInterval = setInterval(() => {
-      console.log("🔄 Auto-refreshing decisions data...");
+      console.log(`📊 Auto-refreshing decisions data at ${new Date().toLocaleTimeString()}...`);
       loadDecisionsData();
-    }, 60000);
+    }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
 
     // Cleanup interval on component unmount to prevent memory leaks
     return () => {
@@ -446,30 +477,13 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     handleResetZoom,
   ]);
 
-  // Update current candle data periodically (only if no RKB data)
+  // REAL-TIME FIX: Disable simulation since we have real API data updates every 30 seconds
+  // This simulation was overriding the real API datetime and causing old data to display
   useEffect(() => {
-    if (rkbData.length > 0) return; // Don't run simulation if we have real data
-
-    const interval = setInterval(() => {
-      const newPrice = currentPrice + (Math.random() - 0.5) * 20;
-      const newChange = newPrice - currentPrice;
-      const newChangePercent = (newChange / currentPrice) * 100;
-
-      setCurrentPrice(newPrice);
-      setPriceChange(newChange);
-      setPriceChangePercent(newChangePercent);
-
-      setCurrentCandleData((prev) => ({
-        ...prev,
-        close: newPrice,
-        high: Math.max(prev.high, newPrice),
-        low: Math.min(prev.low, newPrice),
-        volume: prev.volume + Math.floor(Math.random() * 100000),
-      }));
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [currentPrice, rkbData.length]);
+    // DISABLED: Simulation is no longer needed with real-time API updates
+    // The simulation was causing "08:45" to override the real API datetime "15:15"
+    console.log('📈 Real-time API data mode: Simulation disabled');
+  }, []);
 
   return (
     <div ref={containerRef} className={`flex flex-col ${className}`}>
@@ -514,6 +528,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             enableTwoScale={twoScaleEnabled} // Dual price scale functionality
             showPlotline={showPlotline} // RKB plotline indicator
             showDecisionSignals={showDecisionSignals} // Enhanced triangle markers for BUYYES/SELLYES decisions
+            autoRefresh={false} // REAL-TIME FIX: Disable StockChart auto-refresh to prevent conflicts (index handles it)
+            onDecisionClick={handleDecisionClick} // DECISION CLICK INTEGRATION: Handle triangle marker clicks
           />
 
           {/* Stats Panel for Mobile */}
@@ -536,6 +552,9 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
                   ohlcData={currentCandleData}
                   lastDecisions={realDecisions.length > 0 ? realDecisions : []}
                   technicalIndicators={technicalIndicators}
+                  openDecisionDialog={decisionDialogOpen} // DECISION CLICK INTEGRATION: Control dialog state
+                  onDecisionDialogClose={handleDecisionDialogClose} // DECISION CLICK INTEGRATION: Handle dialog close
+                  highlightDecisionDatetime={highlightedDecisionDatetime} // DECISION CLICK INTEGRATION: Highlight specific decision
                 />
               </div>
             </div>
@@ -555,6 +574,9 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
               ohlcData={currentCandleData}
               lastDecisions={realDecisions}
               technicalIndicators={technicalIndicators}
+              openDecisionDialog={decisionDialogOpen} // DECISION CLICK INTEGRATION: Control dialog state
+              onDecisionDialogClose={handleDecisionDialogClose} // DECISION CLICK INTEGRATION: Handle dialog close
+              highlightDecisionDatetime={highlightedDecisionDatetime} // DECISION CLICK INTEGRATION: Highlight specific decision
             />
           </div>
         )}

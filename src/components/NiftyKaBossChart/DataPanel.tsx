@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -59,6 +60,10 @@ interface DataPanelProps {
     rkbSupport?: number | undefined;
     rkbResistance?: number | undefined;
   };
+  // DECISION CLICK INTEGRATION: Props for handling clicked decision highlighting and dialog control
+  openDecisionDialog?: boolean;
+  onDecisionDialogClose?: () => void;
+  highlightDecisionDatetime?: string;
 }
 
 const DataPanel: React.FC<DataPanelProps> = ({
@@ -71,6 +76,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
   ohlcData,
   lastDecisions,
   technicalIndicators,
+  openDecisionDialog = false,
+  onDecisionDialogClose,
+  highlightDecisionDatetime,
 }) => {
   const [dailyMovements, setDailyMovements] = useState<
     Array<{
@@ -85,12 +93,128 @@ const DataPanel: React.FC<DataPanelProps> = ({
   // New state for all decisions popup with proper state management
   const [allDecisions, setAllDecisions] = useState<DecisionData[]>([]);
   const [loadingAllDecisions, setLoadingAllDecisions] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // DECISION CLICK INTEGRATION: Dialog state management with external control
+  const [dialogOpen, setDialogOpen] = useState(openDecisionDialog);
   const [hasLoadedDecisions, setHasLoadedDecisions] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
+
+  // DECISION CLICK INTEGRATION: Sync external dialog control with internal state
+  useEffect(() => {
+    if (openDecisionDialog !== dialogOpen) {
+      setDialogOpen(openDecisionDialog);
+      if (openDecisionDialog) {
+        // Reset pagination and fetch decisions when opening
+        setCurrentPage(1);
+        if (!hasLoadedDecisions) {
+          fetchAllDecisions();
+        }
+      }
+    }
+  }, [openDecisionDialog]);
+
+  // DECISION CLICK INTEGRATION: Auto-scroll and pagination to highlighted decision
+  useEffect(() => {
+    if (highlightDecisionDatetime && allDecisions.length > 0 && dialogOpen) {
+      console.log(
+        "🔍 DEBUG - Looking for highlighted datetime:",
+        `"${highlightDecisionDatetime}"`
+      );
+      console.log(
+        "🔍 DEBUG - Available decision datetimes:",
+        allDecisions.slice(0, 5).map((d) => `"${d.datetime}"`)
+      );
+
+      // DATETIME FIX: Enhanced datetime matching with multiple format support
+      const normalizeDateTime = (dt: string) => {
+        if (!dt) return "";
+        // Remove GMT suffix and trim
+        let normalized = dt.replace(/ GMT$/, "").trim();
+
+        // Handle different date formats for comparison
+        // Format 1: "2025-07-24 11:15" -> "Thu, 24 Jul 2025 11:15:00"
+        // Format 2: "Thu, 24 Jul 2025 11:15:00" -> "Thu, 24 Jul 2025 11:15:00"
+
+        // If it's in YYYY-MM-DD format, convert to the decision format
+        const dateRegex = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
+        const match = normalized.match(dateRegex);
+
+        if (match) {
+          const [, year, month, day, hour, minute] = match;
+          const date = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hour),
+            parseInt(minute)
+          );
+          const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const monthNames = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
+
+          const dayName = dayNames[date.getDay()];
+          const monthName = monthNames[date.getMonth()];
+
+          normalized = `${dayName}, ${day} ${monthName} ${year} ${hour}:${minute}:00`;
+        }
+
+        return normalized;
+      };
+
+      const normalizedHighlight = normalizeDateTime(highlightDecisionDatetime);
+
+      // Find the index of the highlighted decision
+      const highlightedIndex = allDecisions.findIndex((decision, index) => {
+        const normalizedDecision = normalizeDateTime(decision.datetime);
+
+        if (index < 3) {
+          // Debug first few entries
+          console.log(`🔍 DEBUG ${index} - Comparing:`, {
+            highlight: `"${normalizedHighlight}"`,
+            decision: `"${normalizedDecision}"`,
+            match: normalizedHighlight === normalizedDecision,
+          });
+        }
+
+        return normalizedHighlight === normalizedDecision;
+      });
+
+      console.log("🔍 DEBUG - Found highlighted index:", highlightedIndex);
+
+      if (highlightedIndex !== -1) {
+        // Calculate which page the highlighted decision is on
+        const targetPage = Math.floor(highlightedIndex / itemsPerPage) + 1;
+        if (targetPage !== currentPage) {
+          setCurrentPage(targetPage);
+          console.log(
+            `📍 Auto-navigated to page ${targetPage} for highlighted decision`
+          );
+        }
+      } else {
+        console.log("❌ DEBUG - No matching decision found for highlighting");
+      }
+    }
+  }, [
+    highlightDecisionDatetime,
+    allDecisions,
+    dialogOpen,
+    currentPage,
+    itemsPerPage,
+  ]);
 
   // Fetch nifty movement data with optimized loading
   useEffect(() => {
@@ -155,9 +279,15 @@ const DataPanel: React.FC<DataPanelProps> = ({
     }
   };
 
-  // Function to handle dialog open - triggers data fetch only when needed
+  // DECISION CLICK INTEGRATION: Enhanced dialog open handler with external control support
   const handleDialogOpen = async (open: boolean) => {
     setDialogOpen(open);
+
+    // If externally controlled, notify parent component
+    if (!open && onDecisionDialogClose) {
+      onDecisionDialogClose();
+    }
+
     if (open && !hasLoadedDecisions) {
       await fetchAllDecisions();
     }
@@ -167,43 +297,56 @@ const DataPanel: React.FC<DataPanelProps> = ({
     }
   };
 
-  // Function to format decision data for display
+  // DATETIME FIX: Function to format decision data preserving original API datetime format
   const formatDecisionForDisplay = (decision: DecisionData) => {
-    // Extract date and time from datetime
-    const dateTime = new Date(decision.datetime);
-    const date = dateTime.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const time = dateTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    // DATETIME FIX: Helper function to clean GMT strings by removing " GMT" suffix only
+    // This preserves the exact datetime format from API but removes trailing GMT
+    const cleanDateTimeString = (dateString: string): string => {
+      if (!dateString) return "N/A";
+      // Remove only the " GMT" suffix if present, keep everything else as-is
+      return dateString.replace(/ GMT$/, "");
+    };
+
+    // DATETIME FIX: Helper function to split datetime into date and time parts
+    // This handles both formats: "2015-01-09 09:15" and "Thu, 24 Jul 2025 11:15:00"
+    const splitDateTime = (
+      dateTimeString: string
+    ): { date: string; time: string } => {
+      const cleaned = cleanDateTimeString(dateTimeString);
+
+      // Handle format like "Thu, 24 Jul 2025 11:15:00"
+      if (cleaned.includes(",")) {
+        const parts = cleaned.split(" ");
+        if (parts.length >= 5) {
+          const datePart = parts.slice(0, 4).join(" "); // "Thu, 24 Jul 2025"
+          const timePart = parts[4] || "00:00:00"; // "11:15:00"
+          return { date: datePart, time: timePart };
+        }
+      }
+
+      // Handle format like "2015-01-09 09:15"
+      if (cleaned.includes(" ")) {
+        const [datePart, timePart] = cleaned.split(" ");
+        return { date: datePart || "N/A", time: timePart || "00:00" };
+      }
+
+      // Fallback: treat entire string as date
+      return { date: cleaned, time: "00:00" };
+    };
+
+    // DATETIME FIX: Use original datetime strings without transformation
+    const { date, time } = splitDateTime(decision.datetime);
 
     // Clean up decision text
     let cleanDecision = decision.decision;
     if (cleanDecision === "SELLYES") cleanDecision = "SELL";
     if (cleanDecision === "BUYYES") cleanDecision = "BUY";
 
-    // Format H Date and L Date
+    // DATETIME FIX: Format H Date and L Date preserving original format
     const formatDateString = (dateString: string | undefined) => {
       if (!dateString) return "N/A";
-      try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }) + " " + date.toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        });
-      } catch {
-        return "N/A";
-      }
+      // Just clean the GMT suffix, preserve the rest of the format
+      return cleanDateTimeString(dateString);
     };
 
     return {
@@ -227,11 +370,80 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const endIndex = startIndex + itemsPerPage;
   const currentDecisions = allDecisions.slice(startIndex, endIndex);
 
-  // Function to get row background color based on returns
+  // DECISION CLICK INTEGRATION: Enhanced row background color with highlighting support
   const getRowBackgroundColor = (
     returns: "Profit" | "Loss" | undefined,
-    favMoves: number
+    favMoves: number,
+    decisionDatetime?: string
   ) => {
+    // PRIORITY 1: Check if this row should be highlighted due to triangle click
+    if (highlightDecisionDatetime && decisionDatetime) {
+      // DATETIME FIX: Use the same enhanced normalization function for consistent matching
+      const normalizeDateTime = (dt: string) => {
+        if (!dt) return "";
+        // Remove GMT suffix and trim
+        let normalized = dt.replace(/ GMT$/, "").trim();
+
+        // Handle different date formats for comparison
+        // Format 1: "2025-07-24 11:15" -> "Thu, 24 Jul 2025 11:15:00"
+        // Format 2: "Thu, 24 Jul 2025 11:15:00" -> "Thu, 24 Jul 2025 11:15:00"
+
+        // If it's in YYYY-MM-DD format, convert to the decision format
+        const dateRegex = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
+        const match = normalized.match(dateRegex);
+
+        if (match) {
+          const [, year, month, day, hour, minute] = match;
+          const date = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day),
+            parseInt(hour),
+            parseInt(minute)
+          );
+          const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const monthNames = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
+
+          const dayName = dayNames[date.getDay()];
+          const monthName = monthNames[date.getMonth()];
+
+          normalized = `${dayName}, ${day} ${monthName} ${year} ${hour}:${minute}:00`;
+        }
+
+        return normalized;
+      };
+
+      const normalizedHighlight = normalizeDateTime(highlightDecisionDatetime);
+      const normalizedDecision = normalizeDateTime(decisionDatetime);
+
+      // Debug logging for row highlighting
+      if (normalizedHighlight === normalizedDecision) {
+        console.log("🎯 HIGHLIGHTING ROW:", {
+          highlight: normalizedHighlight,
+          decision: normalizedDecision,
+          theme: theme ? "light" : "dark",
+        });
+        // Bright highlight for clicked decision
+        return theme
+          ? "bg-blue-200 border-2 border-blue-400"
+          : "bg-blue-800 border-2 border-blue-500";
+      }
+    }
+
+    // PRIORITY 2: Default profit/loss coloring
     if (returns === "Profit" || favMoves > 0) {
       return theme ? "bg-green-50" : "bg-green-900/20";
     } else if (returns === "Loss") {
@@ -611,6 +823,16 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     <BarChart3 size={20} />
                     <span>Nifty Ka Boss Decisions</span>
                   </DialogTitle>
+                  <DialogDescription
+                    className={`text-sm ${
+                      theme ? "text-gray-600" : "text-gray-400"
+                    }`}
+                  >
+                    Complete history of RKB trading decisions with performance
+                    analytics
+                    {highlightDecisionDatetime &&
+                      " - Highlighted: Selected triangle decision"}
+                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="mt-4 transition-all duration-300 ease-in-out">
@@ -690,7 +912,8 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                   key={`${decision.datetime}-${index}`}
                                   className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-all duration-200 ease-in-out ${getRowBackgroundColor(
                                     formattedDecision.returns,
-                                    formattedDecision.favMoves
+                                    formattedDecision.favMoves,
+                                    decision.datetime // DECISION CLICK INTEGRATION: Pass original datetime for highlighting
                                   )}`}
                                 >
                                   <div className="min-w-[80px]">
@@ -935,7 +1158,8 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         key={index}
                         className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-colors duration-200 ${getRowBackgroundColor(
                           decision.returns,
-                          decision.favMoves
+                          decision.favMoves,
+                          `${decision.date} ${decision.time}` // DECISION CLICK INTEGRATION: Reconstruct datetime for highlighting
                         )}`}
                       >
                         <div className="min-w-[80px]">

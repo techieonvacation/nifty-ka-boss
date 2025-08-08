@@ -51,6 +51,13 @@ interface StockChartProps {
   showDecisionSignals?: boolean;
   autoRefresh?: boolean;
   refreshInterval?: number;
+  // DECISION CLICK HANDLER: Callback for when decision triangle markers are clicked
+  onDecisionClick?: (decisionData: {
+    decision: "BUY" | "SELL";
+    datetime: string;
+    price: number;
+    time: UTCTimestamp;
+  }) => void;
 }
 
 interface ChartData {
@@ -63,6 +70,10 @@ interface ChartData {
   plotline?: number;
   trend?: string;
   decision?: string;
+  // DATETIME FIX: Add original datetime fields to match ChartDataPoint interface
+  originalDatetime?: string; // Raw datetime string from API (e.g., "2015-01-09 09:15")
+  originalHighDate?: string; // Raw HighDate string from API (e.g., "Thu, 24 Jul 2025 11:15:00 GMT")
+  originalLowDate?: string; // Raw LowDate string from API (e.g., "Thu, 24 Jul 2025 10:15:00 GMT")
 }
 
 interface IndicatorData {
@@ -107,10 +118,10 @@ export interface StockChartRef {
   setZoomLevel: (level: number) => void;
 }
 
-// Performance optimization constants for optimal chart rendering
+// REAL-TIME FIX: Performance optimization constants optimized for real-time trading data
 const PERFORMANCE_CONFIG = {
   DEBOUNCE_DELAY: 150, // Debounce delay for resize and theme changes
-  REFRESH_INTERVAL: 60000, // 1 minute auto-refresh interval for real-time data sync
+  REFRESH_INTERVAL: 30000, // REDUCED: 30 seconds auto-refresh for faster real-time data sync (was 60000)
   MAX_DATA_POINTS: 1000, // Maximum data points to render for performance
   ANIMATION_DURATION: 200, // Animation duration for smooth transitions
 } as const;
@@ -279,6 +290,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       showDecisionSignals = true,
       autoRefresh = true,
       refreshInterval = PERFORMANCE_CONFIG.REFRESH_INTERVAL,
+      onDecisionClick,
     },
     ref
   ) => {
@@ -320,6 +332,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // Store current chart data for external access
     const currentChartData = useRef<ChartData[]>([]);
+
+    // DATETIME FIX: Create lookup map for timestamp to original datetime mapping
+    // This allows us to display the exact API datetime when hovering over candles
+    const timestampToDatetimeMap = useRef<Map<number, string>>(new Map());
 
     // CHART STABILITY: Track theme change state to prevent interference
     const isThemeChanging = useRef<boolean>(false);
@@ -531,7 +547,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // Enhanced RKB data loading with error handling and caching
     const loadRkbData = useCallback(async (): Promise<ChartData[]> => {
       try {
-        const rkbData = await fetchRkbData();
+        // REAL-TIME FIX: Use cache busting for fresh chart data updates
+        const rkbData = await fetchRkbData(true); // Force fresh data for real-time chart updates
         const chartData = convertRkbDataToChartData(rkbData);
 
         // Limit data points for performance
@@ -543,6 +560,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           }));
 
         currentChartData.current = limitedData;
+        
+        // DATETIME FIX: Populate timestamp to datetime lookup map
+        // This enables accurate datetime display in OHLC hover tooltip
+        timestampToDatetimeMap.current.clear();
+        limitedData.forEach(item => {
+          if (item.originalDatetime) {
+            timestampToDatetimeMap.current.set(item.time, item.originalDatetime);
+          }
+        });
+        
         return limitedData;
       } catch (error) {
         console.error("Error loading RKB data:", error);
@@ -1035,6 +1062,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           lockVisibleTimeRangeOnResize: true, // Maintain view on resize
           borderVisible: true,
           ticksVisible: true,
+          // DATETIME FIX: Time scale will display based on the UTC timestamps we provide
+          // The IST conversion is handled in the data conversion process
         },
         handleScroll: {
           mouseWheel: true,
@@ -1264,10 +1293,18 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 }
               }
 
+              // DATETIME FIX: Use original datetime from API instead of converting timestamp
+              const originalDatetime = timestampToDatetimeMap.current.get(param.time as number);
+              
+              // Clean datetime format for display (remove GMT suffix if present)
+              const cleanDatetime = originalDatetime ? originalDatetime.replace(/ GMT$/, "") : null;
+              
+              const displayTime = cleanDatetime || new Date(
+                (param.time as number) * 1000
+              ).toLocaleDateString(); // Fallback to converted time if original not found
+
               setHoveredOHLC({
-                time: new Date(
-                  (param.time as number) * 1000
-                ).toLocaleDateString(),
+                time: displayTime,
                 open,
                 high,
                 low,
@@ -1280,6 +1317,89 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             setHoveredOHLC(null);
           }
         });
+      }
+
+      // DECISION CLICK HANDLER: Add click event listener to chart container for triangle marker clicks
+      if (chartContainerRef.current && onDecisionClick) {
+        const handleChartClick = (event: MouseEvent) => {
+          if (!chartRef.current || !candlestickSeriesRef.current) return;
+
+          // Get click coordinates relative to the chart container
+          const rect = chartContainerRef.current!.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+
+          // Convert pixel coordinates to chart coordinates
+          try {
+            const timeScale = chartRef.current.timeScale();
+            
+            // Get the time value at the clicked x coordinate
+            const clickedTime = timeScale.coordinateToTime(x);
+            if (!clickedTime) return;
+
+            // Find the chart data point that matches the clicked time
+            const clickedDataPoint = currentChartData.current.find(
+              (point) => Math.abs(point.time - (clickedTime as number)) < 300 // Within 5 minute tolerance for better detection
+            );
+
+            console.log("🔍 DEBUG - Click detection:", {
+              clickedTime: clickedTime,
+              foundPoint: !!clickedDataPoint,
+              pointDecision: clickedDataPoint?.decision,
+              totalPoints: currentChartData.current.length
+            });
+
+            if (clickedDataPoint && clickedDataPoint.decision) {
+              // Check if this is a decision signal (BUYYES or SELLYES)
+              const isDecisionSignal = 
+                clickedDataPoint.decision === "BUYYES" || 
+                clickedDataPoint.decision === "SELLYES";
+
+              if (isDecisionSignal) {
+                // Get the original datetime for the clicked point
+                const originalDatetime = timestampToDatetimeMap.current.get(clickedDataPoint.time);
+                
+                console.log("🔍 DEBUG - Triangle click sources:", {
+                  fromMap: originalDatetime,
+                  fromPoint: clickedDataPoint.originalDatetime,
+                  pointTime: clickedDataPoint.time,
+                  mapSize: timestampToDatetimeMap.current.size
+                });
+                
+                // DATETIME FIX: Always use the originalDatetime from the chart data point
+                // This ensures we use the exact same format as the decision popup data
+                const finalDatetime = clickedDataPoint.originalDatetime || originalDatetime || "";
+                
+                // Prepare decision data for the callback
+                const decisionData = {
+                  decision: (clickedDataPoint.decision === "BUYYES" ? "BUY" : "SELL") as "BUY" | "SELL",
+                  datetime: finalDatetime,
+                  price: clickedDataPoint.close,
+                  time: clickedDataPoint.time,
+                };
+
+                // Trigger the decision click callback
+                onDecisionClick(decisionData);
+
+                console.log("🎯 Decision triangle clicked:", decisionData);
+              }
+            }
+          } catch (error) {
+            console.warn("Error handling chart click:", error);
+          }
+        };
+
+        // Add click event listener to chart container
+        chartContainerRef.current.addEventListener("click", handleChartClick);
+        
+        // Store reference for cleanup
+        const currentContainer = chartContainerRef.current;
+        
+        // Return cleanup function that removes the click listener
+        return () => {
+          if (currentContainer) {
+            currentContainer.removeEventListener("click", handleChartClick);
+          }
+        };
       }
 
       return () => {
@@ -1343,6 +1463,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       showPlotline,
       colors,
       handleResize,
+      onDecisionClick, // DECISION CLICK HANDLER: Include in dependencies to update click handler when callback changes
     ]);
 
     // CHART STABILITY: Enhanced data loading with perfect view state preservation
@@ -1370,6 +1491,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         const emaData = calculateEMA(chartData, 20);
         const rsiData = calculateRSI(chartData, 14);
         const macdData = calculateMACD(chartData, 12, 26, 9);
+
+        // DATETIME FIX: Update timestamp to datetime lookup map for hover functionality
+        timestampToDatetimeMap.current.clear();
+        chartData.forEach(item => {
+          if (item.originalDatetime) {
+            timestampToDatetimeMap.current.set(item.time, item.originalDatetime);
+          }
+        });
 
         // Set candlestick data for right scale
         if (candlestickSeriesRef.current) {
@@ -1529,7 +1658,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // STABILITY: Chart initializing once on component mount
       const cleanup = initializeChart();
       return cleanup;
-    }, []); // Empty dependency array - initialize only once
+    }, [initializeChart]); // Include initializeChart dependency
 
     // CHART STABILITY: Handle prop changes without reinitializing the chart
     useEffect(() => {
@@ -1720,6 +1849,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       showDecisionSignals,
       lockChartPosition,
       unlockChartPosition,
+      createColoredPlotlineSegments,
+      createDecisionTriangles,
     ]);
 
     /**
@@ -1810,7 +1941,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         unlockChartPosition();
         // STABILITY: Plotline toggle completed with position preserved
       }, 100);
-    }, [showPlotline, lockChartPosition, unlockChartPosition]);
+    }, [showPlotline, lockChartPosition, unlockChartPosition, createColoredPlotlineSegments]);
 
     // Handle showDecisionSignals prop changes - toggle triangle markers visibility
     // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
@@ -1850,7 +1981,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         unlockChartPosition();
         // STABILITY: Decision signals toggle completed with position preserved
       }, 100);
-    }, [showDecisionSignals, lockChartPosition, unlockChartPosition]);
+    }, [showDecisionSignals, lockChartPosition, unlockChartPosition, createDecisionTriangles]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
     // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
