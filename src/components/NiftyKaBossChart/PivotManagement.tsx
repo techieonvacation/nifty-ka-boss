@@ -358,7 +358,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
             )}
 
             {/* All Pivots List */}
-            {pivots.length > 0 && (
+            {/* {pivots.length > 0 && (
               <div
                 className={`rounded-lg border ${
                   theme
@@ -430,7 +430,7 @@ const PivotManagement: React.FC<PivotManagementProps> = ({
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Add/Edit Form */}
             <div className="border-t pt-4">

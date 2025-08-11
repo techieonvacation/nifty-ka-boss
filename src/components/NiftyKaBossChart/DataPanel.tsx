@@ -372,7 +372,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const endIndex = startIndex + itemsPerPage;
   const currentDecisions = allDecisions.slice(startIndex, endIndex);
 
-  // DECISION CLICK INTEGRATION: Enhanced row background color with highlighting support
+  // ENHANCED ROW BACKGROUND COLOR: Best variant for both light and dark modes
   const getRowBackgroundColor = (
     returns: "Profit" | "Loss" | undefined,
     favMoves: number,
@@ -445,13 +445,23 @@ const DataPanel: React.FC<DataPanelProps> = ({
       }
     }
 
-    // PRIORITY 2: Default profit/loss coloring
-    if (returns === "Profit" || favMoves > 0) {
-      return theme ? "bg-green-50" : "bg-green-900/20";
+    // PRIORITY 2: Enhanced profit/loss coloring with best variants for both themes
+    if (returns === "Profit") {
+      // Green for profit - best variants for both themes
+      return theme
+        ? "bg-green-50 border-l-4 border-green-400 hover:bg-green-100"
+        : "bg-green-900/30 border-l-4 border-green-500 hover:bg-green-900/40";
     } else if (returns === "Loss") {
-      return theme ? "bg-red-50" : "bg-red-900/20";
+      // Red for loss - best variants for both themes
+      return theme
+        ? "bg-red-50 border-l-4 border-red-400 hover:bg-red-100"
+        : "bg-red-900/30 border-l-4 border-red-500 hover:bg-red-900/40";
+    } else {
+      // Yellow for no returns/undefined - best variants for both themes
+      return theme
+        ? "bg-yellow-50 border-l-4 border-yellow-400 hover:bg-yellow-100"
+        : "bg-yellow-900/30 border-l-4 border-yellow-500 hover:bg-yellow-900/40";
     }
-    return "";
   };
 
   return (
@@ -810,7 +820,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 </button>
               </DialogTrigger>
               <DialogContent
-                className={`max-w-[95vw] max-h-[90vh] w-full transition-all duration-300 ease-in-out ${
+                className={`max-w-[95vw] max-h-[95vh] w-full transition-all duration-300 ease-in-out ${
                   theme
                     ? "bg-white border-gray-200 text-gray-900"
                     : "bg-gray-900 border-gray-700 text-white"
@@ -837,7 +847,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-4 transition-all duration-300 ease-in-out">
+                <div className="mt-1 transition-all duration-300 ease-in-out">
                   {loadingAllDecisions ? (
                     <div className="flex items-center justify-center py-8 space-x-2">
                       <Loader2
@@ -856,7 +866,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     <div className="text-red-400 text-center py-8">{error}</div>
                   ) : allDecisions.length > 0 ? (
                     <div
-                      className={`rounded-lg border overflow-hidden transition-all duration-300 ease-in-out ${
+                      className={`rounded-lg border overflow-hidden transition-all duration-300 ease-in-out shadow-lg ${
                         theme
                           ? "bg-gray-50 border-gray-200"
                           : "bg-gray-800 border-gray-700"
@@ -883,10 +893,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         <div className="min-w-[800px]">
                           {/* Table Header */}
                           <div
-                            className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold border-b sticky top-0 ${
+                            className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm font-semibold border-b sticky top-0 ${
                               theme
-                                ? "text-gray-700 border-gray-200 bg-gray-100"
-                                : "text-gray-300 border-gray-700 bg-gray-900"
+                                ? "text-gray-700 border-gray-200 bg-gradient-to-r from-gray-100 to-gray-200"
+                                : "text-gray-300 border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800"
                             }`}
                           >
                             <div className="min-w-[80px]">Date</div>
@@ -912,7 +922,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                               return (
                                 <div
                                   key={`${decision.datetime}-${index}`}
-                                  className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-all duration-200 ease-in-out ${getRowBackgroundColor(
+                                  className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm transition-all duration-300 ease-in-out cursor-pointer rounded-md ${getRowBackgroundColor(
                                     formattedDecision.returns,
                                     formattedDecision.favMoves,
                                     decision.datetime // DECISION CLICK INTEGRATION: Pass original datetime for highlighting
@@ -940,8 +950,8 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                     <span
                                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                                         formattedDecision.decision === "BUY"
-                                          ? "bg-green-600 text-white shadow-lg"
-                                          : "bg-red-600 text-white shadow-lg"
+                                          ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                          : "bg-red-600 text-white shadow-lg hover:bg-red-700"
                                       }`}
                                     >
                                       {formattedDecision.decision}
@@ -1018,14 +1028,14 @@ const DataPanel: React.FC<DataPanelProps> = ({
                                   <div className="min-w-[70px] flex items-center">
                                     <span
                                       className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                                        formattedDecision.returns ===
-                                          "Profit" ||
-                                        formattedDecision.favMoves > 0
-                                          ? "bg-green-600 text-white shadow-lg"
-                                          : "bg-red-600 text-white shadow-lg"
+                                        formattedDecision.returns === "Profit"
+                                          ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                          : formattedDecision.returns === "Loss"
+                                          ? "bg-red-600 text-white shadow-lg hover:bg-red-700"
+                                          : "bg-yellow-600 text-white shadow-lg hover:bg-yellow-700"
                                       }`}
                                     >
-                                      {formattedDecision.returns}
+                                      {formattedDecision.returns || "N/A"}
                                     </span>
                                   </div>
                                 </div>
@@ -1110,7 +1120,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
           {/* Show real decisions data only */}
           {lastDecisions.length > 0 ? (
             <div
-              className={`rounded-lg border overflow-hidden ${
+              className={`rounded-lg border overflow-hidden shadow-lg ${
                 theme
                   ? "bg-gray-50 border-gray-200"
                   : "bg-gray-800 border-gray-700"
@@ -1132,10 +1142,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <div className="min-w-[800px]">
                   {/* Table Header */}
                   <div
-                    className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm font-semibold border-b sticky top-0 ${
+                    className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm font-semibold border-b sticky top-0 ${
                       theme
-                        ? "text-gray-700 border-gray-200 bg-gray-100"
-                        : "text-gray-300 border-gray-700 bg-gray-900"
+                        ? "text-gray-700 border-gray-200 bg-gradient-to-r from-gray-100 to-gray-200"
+                        : "text-gray-300 border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800"
                     }`}
                   >
                     <div className="min-w-[80px]">Date</div>
@@ -1158,7 +1168,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     {lastDecisions.map((decision, index) => (
                       <div
                         key={index}
-                        className={`grid grid-cols-9 gap-2 px-2 py-2 text-sm transition-colors duration-200 ${getRowBackgroundColor(
+                        className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm transition-all duration-300 ease-in-out cursor-pointer rounded-md ${getRowBackgroundColor(
                           decision.returns,
                           decision.favMoves,
                           `${decision.date} ${decision.time}` // DECISION CLICK INTEGRATION: Reconstruct datetime for highlighting
@@ -1182,10 +1192,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         </div>
                         <div className="min-w-[70px] flex items-center">
                           <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                               decision.decision === "BUY"
-                                ? "bg-green-600 text-white shadow-lg"
-                                : "bg-red-600 text-white shadow-lg"
+                                ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                : "bg-red-600 text-white shadow-lg hover:bg-red-700"
                             }`}
                           >
                             {decision.decision}
@@ -1249,14 +1259,15 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         </div>
                         <div className="min-w-[70px] flex items-center">
                           <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                              decision.returns === "Profit" ||
-                              decision.favMoves > 0
-                                ? "bg-green-600 text-white shadow-lg"
-                                : "bg-red-600 text-white shadow-lg"
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                              decision.returns === "Profit"
+                                ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                : decision.returns === "Loss"
+                                ? "bg-red-600 text-white shadow-lg hover:bg-red-700"
+                                : "bg-yellow-600 text-white shadow-lg hover:bg-yellow-700"
                             }`}
                           >
-                            {decision.returns}
+                            {decision.returns || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -1267,7 +1278,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
             </div>
           ) : (
             <div
-              className={`rounded-lg border overflow-hidden ${
+              className={`rounded-lg border overflow-hidden shadow-lg ${
                 theme
                   ? "bg-gray-50 border-gray-200"
                   : "bg-gray-800 border-gray-700"
