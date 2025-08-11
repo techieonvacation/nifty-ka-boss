@@ -226,8 +226,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
         const movements = await fetchNiftyMovements();
 
         // Transform the API data to match our component's format
+        // Get the last 5 items and reverse them to show newest first
         const transformedData = movements
-          .slice(0, 5)
+          .slice(-5)
+          .reverse()
           .map((item: NiftyMovementData) => {
             // Extract numeric values from strings like "+16.25" and "(+0.06%)"
             const changeStr = item.change.replace(/[+%]/g, "");

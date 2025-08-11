@@ -286,7 +286,7 @@ const Header = memo(function Header({
                 console.log("🔄 Triggering soft data refresh...");
                 // Note: Full page reload is kept as fallback, but could be replaced with
                 // a data refresh callback from parent to maintain chart stability
-                window.location.reload();
+                // window.location.reload(); // REMOVED: This causes unnecessary page reload
               }}
               className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
                 Theme
@@ -441,7 +441,7 @@ const Header = memo(function Header({
             onClick={() => {
               // CHART STABILITY: Soft refresh that doesn't reset chart view state
               console.log("🔄 Triggering soft data refresh (mobile)...");
-              window.location.reload();
+              // window.location.reload(); // REMOVED: This causes unnecessary page reload
             }}
             className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
               Theme

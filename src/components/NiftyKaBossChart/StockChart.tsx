@@ -347,6 +347,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     // CHART STABILITY: Persistent view state that survives component updates
     const persistentViewState = useRef<ChartViewState | null>(null);
 
+    // OPTIMIZATION: Track if initial data load has been completed to prevent unnecessary operations
+    const initialDataLoaded = useRef<boolean>(false);
+
     // CHART STABILITY: Update persistent view state periodically
     useEffect(() => {
       if (!chartRef.current) return;
@@ -560,16 +563,19 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           }));
 
         currentChartData.current = limitedData;
-        
+
         // DATETIME FIX: Populate timestamp to datetime lookup map
         // This enables accurate datetime display in OHLC hover tooltip
         timestampToDatetimeMap.current.clear();
-        limitedData.forEach(item => {
+        limitedData.forEach((item) => {
           if (item.originalDatetime) {
-            timestampToDatetimeMap.current.set(item.time, item.originalDatetime);
+            timestampToDatetimeMap.current.set(
+              item.time,
+              item.originalDatetime
+            );
           }
         });
-        
+
         return limitedData;
       } catch (error) {
         console.error("Error loading RKB data:", error);
@@ -1294,14 +1300,18 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               }
 
               // DATETIME FIX: Use original datetime from API instead of converting timestamp
-              const originalDatetime = timestampToDatetimeMap.current.get(param.time as number);
-              
+              const originalDatetime = timestampToDatetimeMap.current.get(
+                param.time as number
+              );
+
               // Clean datetime format for display (remove GMT suffix if present)
-              const cleanDatetime = originalDatetime ? originalDatetime.replace(/ GMT$/, "") : null;
-              
-              const displayTime = cleanDatetime || new Date(
-                (param.time as number) * 1000
-              ).toLocaleDateString(); // Fallback to converted time if original not found
+              const cleanDatetime = originalDatetime
+                ? originalDatetime.replace(/ GMT$/, "")
+                : null;
+
+              const displayTime =
+                cleanDatetime ||
+                new Date((param.time as number) * 1000).toLocaleDateString(); // Fallback to converted time if original not found
 
               setHoveredOHLC({
                 time: displayTime,
@@ -1331,7 +1341,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           // Convert pixel coordinates to chart coordinates
           try {
             const timeScale = chartRef.current.timeScale();
-            
+
             // Get the time value at the clicked x coordinate
             const clickedTime = timeScale.coordinateToTime(x);
             if (!clickedTime) return;
@@ -1345,33 +1355,38 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               clickedTime: clickedTime,
               foundPoint: !!clickedDataPoint,
               pointDecision: clickedDataPoint?.decision,
-              totalPoints: currentChartData.current.length
+              totalPoints: currentChartData.current.length,
             });
 
             if (clickedDataPoint && clickedDataPoint.decision) {
               // Check if this is a decision signal (BUYYES or SELLYES)
-              const isDecisionSignal = 
-                clickedDataPoint.decision === "BUYYES" || 
+              const isDecisionSignal =
+                clickedDataPoint.decision === "BUYYES" ||
                 clickedDataPoint.decision === "SELLYES";
 
               if (isDecisionSignal) {
                 // Get the original datetime for the clicked point
-                const originalDatetime = timestampToDatetimeMap.current.get(clickedDataPoint.time);
-                
+                const originalDatetime = timestampToDatetimeMap.current.get(
+                  clickedDataPoint.time
+                );
+
                 console.log("🔍 DEBUG - Triangle click sources:", {
                   fromMap: originalDatetime,
                   fromPoint: clickedDataPoint.originalDatetime,
                   pointTime: clickedDataPoint.time,
-                  mapSize: timestampToDatetimeMap.current.size
+                  mapSize: timestampToDatetimeMap.current.size,
                 });
-                
+
                 // DATETIME FIX: Always use the originalDatetime from the chart data point
                 // This ensures we use the exact same format as the decision popup data
-                const finalDatetime = clickedDataPoint.originalDatetime || originalDatetime || "";
-                
+                const finalDatetime =
+                  clickedDataPoint.originalDatetime || originalDatetime || "";
+
                 // Prepare decision data for the callback
                 const decisionData = {
-                  decision: (clickedDataPoint.decision === "BUYYES" ? "BUY" : "SELL") as "BUY" | "SELL",
+                  decision: (clickedDataPoint.decision === "BUYYES"
+                    ? "BUY"
+                    : "SELL") as "BUY" | "SELL",
                   datetime: finalDatetime,
                   price: clickedDataPoint.close,
                   time: clickedDataPoint.time,
@@ -1390,10 +1405,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         // Add click event listener to chart container
         chartContainerRef.current.addEventListener("click", handleChartClick);
-        
+
         // Store reference for cleanup
         const currentContainer = chartContainerRef.current;
-        
+
         // Return cleanup function that removes the click listener
         return () => {
           if (currentContainer) {
@@ -1494,9 +1509,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         // DATETIME FIX: Update timestamp to datetime lookup map for hover functionality
         timestampToDatetimeMap.current.clear();
-        chartData.forEach(item => {
+        chartData.forEach((item) => {
           if (item.originalDatetime) {
-            timestampToDatetimeMap.current.set(item.time, item.originalDatetime);
+            timestampToDatetimeMap.current.set(
+              item.time,
+              item.originalDatetime
+            );
           }
         });
 
@@ -1627,6 +1645,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
 
         setChartState((prev) => ({ ...prev, isLoading: false }));
+        // OPTIMIZATION: Mark initial data load as complete
+        initialDataLoaded.current = true;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load chart data";
@@ -1658,7 +1678,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // STABILITY: Chart initializing once on component mount
       const cleanup = initializeChart();
       return cleanup;
-    }, [initializeChart]); // Include initializeChart dependency
+    }, []); // Remove initializeChart dependency to prevent unnecessary re-initialization
 
     // CHART STABILITY: Handle prop changes without reinitializing the chart
     useEffect(() => {
@@ -1687,10 +1707,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // Load data when chart is ready
     useEffect(() => {
-      if (chartRef.current) {
+      if (chartRef.current && !initialDataLoaded.current) {
+        // Only load data if chart is ready and initial load hasn't been completed yet
         loadData();
+        initialDataLoaded.current = true;
       }
-    }, [loadData]);
+    }, []); // Remove loadData dependency to prevent unnecessary re-loading
 
     // CHART STABILITY: Enhanced theme update with perfect view state preservation
     // This effect handles theme changes without any visual disruption to user's zoom/scroll position
@@ -1704,6 +1726,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         console.warn("Chart is disposed, skipping theme update");
         return;
       }
+
+      // OPTIMIZATION: Skip if theme change is already in progress
+      if (isThemeChanging.current) return;
+
+      // OPTIMIZATION: Skip if initial data load hasn't been completed yet
+      if (!initialDataLoaded.current) return;
 
       // STABILITY: Theme change detected - preserving chart position
 
@@ -1818,17 +1846,28 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       });
 
       // STABILITY: Update plotline and decision signals while position is locked
+      // OPTIMIZATION: Only update if there's actual data to work with
       if (
         (showPlotline || showDecisionSignals) &&
         currentChartData.current.length > 0
       ) {
-        // Update plotline segments with new theme colors if enabled
-        if (showPlotline) {
+        // Update plotline segments with new theme colors if enabled and data exists
+        if (
+          showPlotline &&
+          currentChartData.current.some(
+            (item) => item.plotline !== undefined && !isNaN(item.plotline)
+          )
+        ) {
           createColoredPlotlineSegments(currentChartData.current);
         }
 
-        // Update decision triangles with new theme colors if enabled
-        if (showDecisionSignals) {
+        // Update decision triangles with new theme colors if enabled and data exists
+        if (
+          showDecisionSignals &&
+          currentChartData.current.some(
+            (item) => item.decision === "BUYYES" || item.decision === "SELLYES"
+          )
+        ) {
           createDecisionTriangles(currentChartData.current);
         }
       }
@@ -1906,6 +1945,22 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return;
       }
 
+      // OPTIMIZATION: Only perform operations if there's an actual change
+      const hasPlotlineData = currentChartData.current.some(
+        (item) => item.plotline !== undefined && !isNaN(item.plotline)
+      );
+      if (!hasPlotlineData) return; // Skip if no plotline data available
+
+      // OPTIMIZATION: Check if plotline segments already exist and match the current state
+      const plotlineSegmentsExist = plotlineSegmentsRef.current.length > 0;
+      if (plotlineSegmentsExist === showPlotline) return; // Skip if state already matches
+
+      // OPTIMIZATION: Skip if initial data load hasn't been completed yet
+      if (!initialDataLoaded.current) return;
+
+      // OPTIMIZATION: Skip if theme change is in progress
+      if (isThemeChanging.current) return;
+
       // STABILITY: Lock chart position during plotline changes
       lockChartPosition();
       // STABILITY: Plotline toggle detected - locking position
@@ -1941,7 +1996,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         unlockChartPosition();
         // STABILITY: Plotline toggle completed with position preserved
       }, 100);
-    }, [showPlotline, lockChartPosition, unlockChartPosition, createColoredPlotlineSegments]);
+    }, [
+      showPlotline,
+      lockChartPosition,
+      unlockChartPosition,
+      createColoredPlotlineSegments,
+    ]);
 
     // Handle showDecisionSignals prop changes - toggle triangle markers visibility
     // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
@@ -1960,6 +2020,22 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         console.warn("Chart is disposed, skipping decision triangles toggle");
         return;
       }
+
+      // OPTIMIZATION: Only perform operations if there's an actual change
+      const hasDecisionData = currentChartData.current.some(
+        (item) => item.decision === "BUYYES" || item.decision === "SELLYES"
+      );
+      if (!hasDecisionData) return; // Skip if no decision data available
+
+      // OPTIMIZATION: Check if decision markers already exist and match the current state
+      const decisionMarkersExist = seriesMarkersPluginRef.current !== null;
+      if (decisionMarkersExist === showDecisionSignals) return; // Skip if state already matches
+
+      // OPTIMIZATION: Skip if initial data load hasn't been completed yet
+      if (!initialDataLoaded.current) return;
+
+      // OPTIMIZATION: Skip if theme change is in progress
+      if (isThemeChanging.current) return;
 
       // STABILITY: Lock chart position during decision signals changes
       lockChartPosition();
@@ -1981,7 +2057,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         unlockChartPosition();
         // STABILITY: Decision signals toggle completed with position preserved
       }, 100);
-    }, [showDecisionSignals, lockChartPosition, unlockChartPosition, createDecisionTriangles]);
+    }, [
+      showDecisionSignals,
+      lockChartPosition,
+      unlockChartPosition,
+      createDecisionTriangles,
+    ]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
     // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
@@ -1995,6 +2076,19 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         console.warn("Chart is disposed, skipping two-scale toggle");
         return;
       }
+
+      // OPTIMIZATION: Only perform operations if there's an actual change
+      const currentTwoScaleState = candlestickLeftSeriesRef.current !== null;
+      if (currentTwoScaleState === enableTwoScale) return; // Skip if state is already correct
+
+      // OPTIMIZATION: Skip if no chart data available for two-scale operations
+      if (enableTwoScale && currentChartData.current.length === 0) return;
+
+      // OPTIMIZATION: Skip if initial data load hasn't been completed yet
+      if (!initialDataLoaded.current) return;
+
+      // OPTIMIZATION: Skip if theme change is in progress
+      if (isThemeChanging.current) return;
 
       // Store current view state using utility function
       const viewState = preserveChartViewState(chartRef.current);
