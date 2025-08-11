@@ -13,9 +13,11 @@ import {
   ZoomIn,
   Sun,
   Moon,
+  AlertTriangle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import PivotManagement from "./PivotManagement";
+import { dummy } from "../../lib/dummy";
 
 interface HeaderProps {
   StockInterval: string;
@@ -121,6 +123,9 @@ const Header = memo(function Header({
   // Check if user is admin
   const isAdmin = session?.user?.role === "admin";
 
+  // Check if there's an active trade (for now using dummy data)
+  const hasActiveTrade = dummy.Status === "open trade";
+
   return (
     <div className="relative w-full">
       {/* Custom CSS for xs breakpoint */}
@@ -175,6 +180,79 @@ const Header = memo(function Header({
                 onSupportChange={onSupportChange}
                 onResistanceChange={onResistanceChange}
               />
+            )}
+
+            {/* Active Decision Section - Integrated within header */}
+            {hasActiveTrade && (
+              <div
+                className={`hidden sm:flex items-center space-x-3 px-3 py-1.5 rounded-lg border ${
+                  Theme
+                    ? "bg-amber-900/20 border-amber-700/30 text-amber-200"
+                    : "bg-amber-50 border-amber-200 text-amber-800"
+                }`}
+              >
+                <div className="flex items-center space-x-1">
+                  <AlertTriangle
+                    className={`w-3 h-3 ${
+                      Theme ? "text-amber-400" : "text-amber-600"
+                    }`}
+                  />
+                  <span className="text-xs font-medium">Active Decision</span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">DT:</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        Theme ? "bg-amber-900/30" : "bg-amber-100"
+                      }`}
+                    >
+                      {dummy.datetime}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">Price:</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        Theme ? "bg-amber-900/30" : "bg-amber-100"
+                      }`}
+                    >
+                      ₹{dummy.close_x.toFixed(2)}
+                    </span>
+                  </div>
+                  {parseFloat(dummy["New Base"]) <= 0 && (
+                    <div className="flex items-center space-x-1">
+                      <span className="font-medium">SL:</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-xs ${
+                          Theme ? "bg-amber-900/30" : "bg-amber-100"
+                        }`}
+                      >
+                        ₹{dummy.SL.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-1">
+                    <span className="font-medium">Base:</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-xs ${
+                        Theme ? "bg-amber-900/30" : "bg-amber-100"
+                      }`}
+                    >
+                      {dummy["New Base"] || "N/A"}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  className={`text-xs px-2 py-0.5 rounded-full ${
+                    Theme
+                      ? "bg-green-900/30 text-green-300 border border-green-700/50"
+                      : "bg-green-100 text-green-700 border border-green-300"
+                  }`}
+                >
+                  Live
+                </div>
+              </div>
             )}
           </div>
 
