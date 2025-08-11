@@ -249,13 +249,13 @@ const THEME_COLORS = {
     signal: "#f87171", // Red signal line
     plotline: "#fb7185", // Rose plotline
     // Premium triangle colors with enhanced visibility
-    buySignal: "#22c55e", // Vibrant green for buy signals
-    sellSignal: "#ef4444", // Vibrant red for sell signals
+    buySignal: "#06402b", // Vibrant green for buy signals
+    sellSignal: "#c11c84", // Vibrant red for sell signals
   },
   light: {
     background: "#fefefe", // Pure white background
     text: "#0f172a",
-    grid: "#f1f5f9", // Very light grid
+    grid: "#C2C2C2", // Very light grid
     crosshair: "#3b82f6", // Blue crosshair
     upColor: "#059669", // Forest green
     downColor: "#dc2626", // Strong red
@@ -267,8 +267,8 @@ const THEME_COLORS = {
     signal: "#dc2626", // Red signal
     plotline: "#e11d48", // Rose plotline
     // Premium triangle colors with high contrast
-    buySignal: "#16a34a", // Strong green for buy signals
-    sellSignal: "#dc2626", // Strong red for sell signals
+    buySignal: "#06402b", // Strong green for buy signals
+    sellSignal: "#c11c84", // Strong red for sell signals
   },
 } as const;
 
@@ -2152,17 +2152,29 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     }, [enableTwoScale, colors]);
 
     return (
-      <div className={`relative ${className}`}>
+      <div className={`relative w-full ${className}`}>
+        {/* Custom CSS for xs breakpoint */}
+        <style jsx>{`
+          @media (min-width: 475px) {
+            .xs\\:inline {
+              display: inline !important;
+            }
+            .xs\\:block {
+              display: block !important;
+            }
+          }
+        `}</style>
+
         {/* Professional loading overlay */}
         {chartState.isLoading && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-            <div className="flex items-center space-x-3 text-white">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <div className="flex items-center space-x-2 sm:space-x-3 text-white p-2 sm:p-0">
+              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white"></div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">
+                <span className="text-xs sm:text-sm font-medium">
                   Loading chart data...
                 </span>
-                <span className="text-xs text-gray-300">
+                <span className="text-xs text-gray-300 hidden sm:block">
                   Fetching latest market data
                 </span>
               </div>
@@ -2172,11 +2184,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         {/* Professional error overlay */}
         {chartState.error && (
-          <div className="absolute inset-0 bg-red-500/10 flex items-center justify-center z-10">
-            <div className="bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg">
+          <div className="absolute inset-0 bg-red-500/10 flex items-center justify-center z-10 p-4">
+            <div className="bg-red-500 text-white px-4 py-3 sm:px-6 sm:py-4 rounded-lg shadow-lg max-w-xs sm:max-w-md w-full">
               <div className="flex items-center space-x-2">
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -2186,13 +2198,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="font-medium">Error</span>
+                <span className="font-medium text-sm sm:text-base">Error</span>
               </div>
-              <p className="text-sm mt-1">{chartState.error}</p>
+              <p className="text-xs sm:text-sm mt-1">{chartState.error}</p>
             </div>
           </div>
         )}
-
         {/* Professional status indicators */}
         <div className="absolute top-4 left-4 z-20 space-y-2">
           {/* OHLC Data Display on Hover */}
@@ -2200,105 +2211,85 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             <div
               className={`px-3 py-2 rounded-lg shadow-lg font-urbanist ${
                 theme === "dark"
-                  ? "bg-gray-800/90 text-white border border-gray-600"
-                  : "bg-white/90 text-gray-900 border border-gray-200"
+                  ? "bg-gray-800/95 text-gray-100 border border-gray-700"
+                  : "bg-white/95 text-gray-800 border border-gray-200"
               }`}
             >
-              <div className="text-xs font-medium mb-1">OHLC Data</div>
+              <div
+                className={`text-xs font-medium mb-1 ${
+                  theme === "dark" ? "text-gray-300" : "text-gray-600"
+                }`}
+              >
+                OHLC Data
+              </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                <div className="text-gray-400">Date:</div>
-                <div className="text-white">{hoveredOHLC.time}</div>
+                <div
+                  className={
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }
+                >
+                  Date:
+                </div>
+                <div>{hoveredOHLC.time}</div>
 
-                <div className="text-gray-400">Open:</div>
-                <div className="text-white">₹{hoveredOHLC.open.toFixed(2)}</div>
+                <div
+                  className={
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }
+                >
+                  Open:
+                </div>
+                <div>₹{hoveredOHLC.open.toFixed(2)}</div>
 
-                <div className="text-gray-400">High:</div>
-                <div className="text-green-400">
+                <div
+                  className={
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }
+                >
+                  High:
+                </div>
+                <div
+                  className={
+                    theme === "dark" ? "text-emerald-400" : "text-emerald-600"
+                  }
+                >
                   ₹{hoveredOHLC.high.toFixed(2)}
                 </div>
 
-                <div className="text-gray-400">Low:</div>
-                <div className="text-red-400">
+                <div
+                  className={
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }
+                >
+                  Low:
+                </div>
+                <div
+                  className={theme === "dark" ? "text-red-400" : "text-red-600"}
+                >
                   ₹{hoveredOHLC.low.toFixed(2)}
                 </div>
 
-                <div className="text-gray-400">Close:</div>
-                <div className="text-white">
-                  ₹{hoveredOHLC.close.toFixed(2)}
+                <div
+                  className={
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  }
+                >
+                  Close:
                 </div>
-
-                {hoveredOHLC.volume && (
-                  <>
-                    <div className="text-gray-400">Volume:</div>
-                    <div className="text-blue-400">
-                      {hoveredOHLC.volume.toLocaleString()}
-                    </div>
-                  </>
-                )}
+                <div>₹{hoveredOHLC.close.toFixed(2)}</div>
               </div>
             </div>
           )}
-
-          {/* Current Price Indicator */}
-          {/* {chartState.currentPrice && (
-            <div
-              className={`px-3 py-1 rounded-lg shadow-lg font-urbanist flex items-center gap-x-2 ${
-                theme === "dark"
-                  ? "bg-gray-800/80 text-white border border-gray-600"
-                  : "bg-white/80 text-gray-900 border border-gray-200"
-              }`}
-            >
-              <div className="text-sm font-medium">
-                ₹{chartState.currentPrice.toLocaleString()}
-              </div>
-              {chartState.priceChange && (
-                <div
-                  className={`text-xs ${
-                    chartState.priceChange >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }`}
-                >
-                  {chartState.priceChange >= 0 ? "+" : ""}
-                  {chartState.priceChange.toFixed(2)}(
-                  {chartState.priceChangePercent?.toFixed(2)}%)
-                </div>
-              )}
-            </div>
-          )} */}
-
-          {/* Trend Indicator */}
-          {/* {chartState.currentTrend && (
-            <div
-              className={`px-3 py-1 rounded-lg shadow-lg flex items-center gap-x-2 font-urbanist ${
-                theme === "dark"
-                  ? "bg-gray-800/80 text-white border border-gray-600"
-                  : "bg-white/80 text-gray-900 border border-gray-200"
-              }`}
-            >
-              <div className="text-sm font-medium font-urbanist">Trend</div>
-              <div
-                className={`text-xs font-urbanist ${
-                  chartState.currentTrend === "BUY"
-                    ? "text-green-400"
-                    : chartState.currentTrend === "SELL"
-                    ? "text-red-400"
-                    : "text-yellow-400"
-                }`}
-              >
-                {chartState.currentTrend}
-              </div>
-            </div>
-          )} */}
         </div>
 
         {/* Professional chart container */}
         <div
           ref={chartContainerRef}
-          className="w-full h-full"
+          className="w-full h-full min-h-[300px] sm:min-h-[400px]"
           style={{
             height: `${height}px`,
             width: width ? `${width}px` : "100%",
+            minHeight: "300px",
           }}
         />
       </div>

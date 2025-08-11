@@ -470,7 +470,19 @@ const DataPanel: React.FC<DataPanelProps> = ({
         theme ? "bg-white text-gray-900" : "bg-gray-900 text-white"
       } transition-all duration-300`}
     >
-      {/* Enhanced Header Section - Responsive */}
+      {/* Custom CSS for xs breakpoint */}
+      <style jsx>{`
+        @media (min-width: 475px) {
+          .xs\\:inline {
+            display: inline !important;
+          }
+          .xs\\:block {
+            display: block !important;
+          }
+        }
+      `}</style>
+
+      {/* Enhanced Header Section - Mobile responsive */}
       <div
         className={`p-3 sm:p-4 border-b ${
           theme
@@ -479,10 +491,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
         }`}
       >
         <div className="space-y-3 sm:space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+          <div className="flex justify-between items-center space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="p-1.5 sm:p-2 bg-blue-600 rounded-lg">
-                <BarChart3 className="text-white" size={20} />
+                <BarChart3 className="text-white w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
                 <h2
@@ -499,9 +511,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 ></p>
               </div>
             </div>
-            <div className="text-left sm:text-right">
+            <div className="text-left">
               <div
-                className={`text-2xl sm:text-3xl font-bold ${
+                className={`text-xl sm:text-2xl lg:text-3xl font-bold ${
                   theme ? "text-gray-900" : "text-white"
                 }`}
               >
@@ -509,9 +521,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
               </div>
               <div className="flex items-center space-x-2 mt-1">
                 {priceChange >= 0 ? (
-                  <ArrowUp className="text-green-500" size={14} />
+                  <ArrowUp className="text-green-500 w-3 h-3 sm:w-4 sm:h-4" />
                 ) : (
-                  <ArrowDown className="text-red-500" size={14} />
+                  <ArrowDown className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
                 )}
                 <span
                   className={`text-sm sm:text-base font-semibold ${
@@ -532,7 +544,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   theme ? "text-gray-600" : "text-gray-400"
                 }`}
               >
-                <Clock size={12} />
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>Last updated at: {lastUpdate}</span>
               </div>
             </div>
@@ -540,23 +552,23 @@ const DataPanel: React.FC<DataPanelProps> = ({
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="flex-1 p-4 space-y-6">
-        {/* OHLC Data Panel */}
+      {/* Main Content Grid - Mobile responsive */}
+      <div className="flex-1 p-3 sm:p-4 space-y-4 sm:space-y-6">
+        {/* OHLC Data Panel - Mobile responsive grid */}
         <div
           className={`space-y-3 border-b ${
             theme ? "border-gray-200" : "border-gray-700"
           }`}
         >
           <h3
-            className={`text-base font-bold ${
+            className={`text-sm sm:text-base font-bold ${
               theme ? "text-gray-900" : "text-white"
             }`}
           >
             OHLC Data
           </h3>
-          <div className="grid grid-cols-6 gap-4 text-sm">
-            <div className="text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 text-xs sm:text-sm">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -572,7 +584,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {ohlcData.open.toFixed(1)}
               </div>
             </div>
-            <div className="text-center">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -584,7 +596,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {ohlcData.low.toFixed(2)}
               </div>
             </div>
-            <div className="text-center">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -596,7 +608,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {ohlcData.high.toFixed(2)}
               </div>
             </div>
-            <div className="text-center">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -612,7 +624,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {ohlcData.close.toFixed(2)}
               </div>
             </div>
-            <div className="text-center">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -628,7 +640,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {(ohlcData.volume / 1000000).toFixed(1)}M
               </div>
             </div>
-            <div className="text-center">
+            <div className="">
               <div
                 className={`text-xs ${
                   theme ? "text-gray-600" : "text-gray-400"
@@ -647,12 +659,12 @@ const DataPanel: React.FC<DataPanelProps> = ({
           </div>
         </div>
 
-        {/* Two Column Layout for Movements and Indicators */}
-        <div className="grid grid-cols-[55%_45%] gap-2">
+        {/* Two Column Layout for Movements and Indicators - Mobile responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-[55%_45%] gap-4 sm:gap-6">
           {/* Last 5 Days Movements */}
           <div className="space-y-3">
             <h3
-              className={`text-base font-bold ${
+              className={`text-sm sm:text-base font-bold ${
                 theme ? "text-gray-900" : "text-white"
               }`}
             >
@@ -660,9 +672,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
             </h3>
             {loading ? (
               <div className="flex items-center justify-center py-4 space-x-2">
-                <Loader2 className="animate-spin text-blue-500" size={16} />
+                <Loader2 className="animate-spin text-blue-500 w-4 h-4 sm:w-5 sm:h-5" />
                 <span
-                  className={`text-sm ${
+                  className={`text-xs sm:text-sm ${
                     theme ? "text-gray-600" : "text-gray-400"
                   }`}
                 >
@@ -671,7 +683,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
               </div>
             ) : error ? (
               <div className="flex items-center justify-center py-4 space-x-2">
-                <div className="text-sm text-red-400">Error: {error}</div>
+                <div className="text-xs sm:text-sm text-red-400">
+                  Error: {error}
+                </div>
               </div>
             ) : dailyMovements.length > 0 ? (
               <div className="space-y-2">
@@ -708,9 +722,9 @@ const DataPanel: React.FC<DataPanelProps> = ({
                         {movement.changePercent.toFixed(2)}%)
                       </span>
                       {movement.change >= 0 ? (
-                        <ArrowUp className="text-green-500" size={12} />
+                        <ArrowUp className="text-green-500 w-3 h-3 sm:w-4 sm:h-4" />
                       ) : (
-                        <ArrowDown className="text-red-500" size={12} />
+                        <ArrowDown className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
                       )}
                     </div>
                   </div>
@@ -719,7 +733,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
             ) : (
               <div className="flex items-center justify-center py-4">
                 <span
-                  className={`text-sm ${
+                  className={`text-xs sm:text-sm ${
                     theme ? "text-gray-600" : "text-gray-400"
                   }`}
                 >
@@ -732,7 +746,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
           {/* Technical Indicators */}
           <div className="space-y-3">
             <h3
-              className={`text-base font-bold ${
+              className={`text-sm sm:text-base font-bold ${
                 theme ? "text-gray-900" : "text-white"
               }`}
             >
@@ -802,11 +816,11 @@ const DataPanel: React.FC<DataPanelProps> = ({
           </div>
         </div>
 
-        {/* Last 5 Decisions Panel */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Decisions Section - Mobile responsive */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
             <h3
-              className={`text-base font-bold ${
+              className={`text-sm sm:text-base font-bold ${
                 theme ? "text-gray-900" : "text-white"
               }`}
             >
@@ -814,13 +828,18 @@ const DataPanel: React.FC<DataPanelProps> = ({
             </h3>
             <Dialog open={dialogOpen} onOpenChange={handleDialogOpen}>
               <DialogTrigger asChild>
-                <button className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl">
-                  <Eye size={14} />
-                  <span>See More</span>
-                </button>
+                <Button
+                  variant={"primary"}
+                  size={"sm"}
+                  onClick={() => handleDialogOpen(true)}
+                  className="w-full sm:w-auto text-xs sm:text-sm px-3 py-2"
+                  leftIcon={<Eye className="size-4" />}
+                >
+                  View All
+                </Button>
               </DialogTrigger>
               <DialogContent
-                className={`max-w-[95vw] max-h-[95vh] w-full transition-all duration-300 ease-in-out ${
+                className={`max-w-[95vw] max-h-[95vh] w-full transition-all duration-300 ease-in-out p-2 lg:p-4 ${
                   theme
                     ? "bg-white border-gray-200 text-gray-900"
                     : "bg-gray-900 border-gray-700 text-white"
@@ -828,7 +847,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
               >
                 <DialogHeader>
                   <DialogTitle
-                    className={`text-xl font-bold flex items-center space-x-2 ${
+                    className={`text-xl font-bold text-center flex items-center justify-center space-x-2 ${
                       theme ? "text-gray-900" : "text-white"
                     }`}
                   >
@@ -836,18 +855,17 @@ const DataPanel: React.FC<DataPanelProps> = ({
                     <span>Nifty Ka Boss Decisions</span>
                   </DialogTitle>
                   <DialogDescription
-                    className={`text-sm ${
+                    className={`text-xs sm:text-sm text-center ${
                       theme ? "text-gray-600" : "text-gray-400"
                     }`}
                   >
-                    Complete history of RKB trading decisions with performance
-                    analytics
+                    Complete history of RKB trading decisions
                     {highlightDecisionDatetime &&
                       " - Highlighted: Selected triangle decision"}
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="mt-1 transition-all duration-300 ease-in-out">
+                <div className="mt-1 transition-all duration-300 ease-in-out overflow-x-auto">
                   {loadingAllDecisions ? (
                     <div className="flex items-center justify-center py-8 space-x-2">
                       <Loader2
@@ -880,10 +898,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
                             : "text-gray-500 border-gray-700 bg-gray-900"
                         }`}
                       >
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           Last 10 Years Nifty Ka Boss Decisions
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           {allDecisions.length} total decisions
                         </p>
                       </div>
@@ -1285,7 +1303,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
               }`}
             >
               <div className="flex items-center justify-center py-8 space-x-2">
-                <Loader2 className="animate-spin text-blue-500" size={16} />
+                <Loader2 className="animate-spin text-blue-500 w-4 h-4 sm:w-5 sm:h-5" />
                 <span
                   className={`${theme ? "text-gray-600" : "text-gray-400"}`}
                 >

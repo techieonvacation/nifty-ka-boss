@@ -11,6 +11,8 @@ import {
   RefreshCw,
   Clock,
   ZoomIn,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import PivotManagement from "./PivotManagement";
@@ -74,10 +76,10 @@ const Header = memo(function Header({
   React.useEffect(() => {
     // Only log in development mode for debugging
     if (process.env.NODE_ENV === "development") {
-      console.log("Header: Session loaded", { 
-        hasSession: !!session, 
+      console.log("Header: Session loaded", {
+        hasSession: !!session,
         role: session?.user?.role,
-        isAdmin: session?.user?.role === "admin"
+        isAdmin: session?.user?.role === "admin",
       });
     }
   }, [session, status]);
@@ -121,6 +123,18 @@ const Header = memo(function Header({
 
   return (
     <div className="relative w-full">
+      {/* Custom CSS for xs breakpoint */}
+      <style jsx>{`
+        @media (min-width: 475px) {
+          .xs\\:inline {
+            display: inline !important;
+          }
+          .xs\\:block {
+            display: block !important;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div
         className={`${
@@ -129,28 +143,28 @@ const Header = memo(function Header({
             : "bg-white border-b border-gray-200 text-gray-900 shadow-lg"
         } w-full transition-all duration-300 ease-in-out backdrop-blur-sm`}
       >
-        <div className="flex items-center justify-between px-3 md:px-6 py-3 md:py-4">
-          {/* Left - Symbol and Interval */}
-          <div className="flex gap-2 md:gap-4 items-center">
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
+          {/* Left - Symbol and Interval - Mobile responsive */}
+          <div className="flex gap-1 sm:gap-2 md:gap-4 items-center">
             <div
-              className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-blue-900/20 hover:bg-blue-900/30 text-blue-300 border border-blue-700/30"
                   : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-              } text-sm md:text-base font-medium`}
+              } text-xs sm:text-sm md:text-base font-medium`}
             >
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-              {exchange}: {symbol}
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-400 animate-pulse"></div>
+              <span className="hidden xs:inline">{exchange}:</span> {symbol}
             </div>
             <div
-              className={`flex items-center space-x-2 cursor-pointer px-3 md:px-4 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
-              } text-sm md:text-base font-medium`}
+              } text-xs sm:text-sm md:text-base font-medium`}
             >
-              <Clock size={14} className="mr-1" />
-              {StockInterval}
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">{StockInterval}</span>
             </div>
 
             {/* Admin Pivot Management - Only show if user is admin */}
@@ -164,9 +178,9 @@ const Header = memo(function Header({
             )}
           </div>
 
-          {/* Center - Current Candle Data */}
+          {/* Center - Current Candle Data - Hidden on mobile for space */}
           {currentCandleData && (
-            <div className="hidden md:flex items-center space-x-4 text-sm">
+            <div className="hidden lg:flex items-center space-x-4 text-sm">
               <div className={`${Theme ? "text-gray-300" : "text-gray-700"}`}>
                 Date: {currentCandleData.date}
               </div>
@@ -182,30 +196,27 @@ const Header = memo(function Header({
             </div>
           )}
 
-          {/* Right - Controls */}
-          <div className="hidden md:flex gap-3 justify-center items-center mx-4">
+          {/* Right - Controls - Hidden on mobile */}
+          <div className="hidden md:flex gap-2 lg:gap-3 justify-center items-center mx-2 lg:mx-4">
             <div onClick={handleThemeToggle}>
               <ThemeButton isDark={Theme} onToggle={handleThemeToggle} />
             </div>
 
             <button
               onClick={handleScreenshot}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Take Screenshot"
             >
-              <Camera
-                size={16}
-                className="group-hover:scale-110 transition-transform"
-              />
+              <Camera className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
             </button>
 
             <button
               onClick={handleDecisionSignalsToggle}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 showDecisionSignals
                   ? Theme
                     ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
@@ -216,16 +227,15 @@ const Header = memo(function Header({
               } group`}
               title="Toggle Decision Signals"
             >
-              <ArrowDownUp
-                size={16}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="text-sm font-medium">Signals</span>
+              <ArrowDownUp className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                Signals
+              </span>
             </button>
 
             <button
               onClick={handlePlotlineToggle}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 showPlotline
                   ? Theme
                     ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
@@ -236,16 +246,15 @@ const Header = memo(function Header({
               } group`}
               title="Toggle Plotline Indicator"
             >
-              <TrendingDown
-                size={16}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="text-sm font-medium">Trends</span>
+              <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                Trends
+              </span>
             </button>
 
             <button
               onClick={handleTwoScaleToggle}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 twoScaleEnabled
                   ? Theme
                     ? "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
@@ -256,27 +265,25 @@ const Header = memo(function Header({
               } group`}
               title="Toggle Dual Price Scales"
             >
-              <BarChart2
-                size={16}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="text-sm font-medium">Dual Scale</span>
+              <BarChart2 className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                Dual Scale
+              </span>
             </button>
 
             <button
               onClick={onResetZoom}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Reset Zoom"
             >
-              <ZoomIn
-                size={16}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="text-sm font-medium">Reset Zoom</span>
+              <ZoomIn className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                Reset Zoom
+              </span>
             </button>
 
             <button
@@ -288,25 +295,24 @@ const Header = memo(function Header({
                 // a data refresh callback from parent to maintain chart stability
                 // window.location.reload(); // REMOVED: This causes unnecessary page reload
               }}
-              className={`flex items-center space-x-2 cursor-pointer px-3 py-2 rounded-lg transition-all duration-200 ${
+              className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
               title="Refresh Data"
             >
-              <RefreshCw
-                size={16}
-                className="group-hover:rotate-180 transition-transform duration-500"
-              />
-              <span className="text-sm font-medium">Refresh</span>
+              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 group-hover:rotate-180 transition-transform duration-500" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                Refresh
+              </span>
             </button>
           </div>
 
-          {/* Right - Mobile menu and stats panel toggles */}
-          <div className="flex gap-2 md:hidden">
+          {/* Right - Mobile menu and stats panel toggles - Enhanced mobile experience */}
+          <div className="flex gap-1 sm:gap-2 md:hidden">
             <button
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-1.5 sm:p-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
@@ -316,145 +322,210 @@ const Header = memo(function Header({
               }
               title="Toggle Stats Panel"
             >
-              <BarChart2 size={20} />
+              <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`p-1.5 sm:p-2 rounded-lg transition-all duration-200 ${
                 Theme
                   ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
                   : "bg-gray-200 hover:bg-gray-300 text-gray-900 border border-gray-300"
               }`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              title="Menu"
+              title="Toggle Menu"
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? (
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Enhanced Mobile Menu - Advanced responsive toggle with all actions and theme toggle */}
       <div
-        className={`fixed md:hidden w-full z-50 transition-all duration-500 ease-in-out ${
-          mobileMenuOpen ? "top-16" : "-top-64"
+        className={`fixed md:hidden left-0 right-0 w-full z-50 transition-all duration-500 ease-in-out ${
+          mobileMenuOpen ? "top-14 sm:top-16" : "-top-96"
         } ${
           Theme
             ? "bg-gray-900 border-b border-gray-700 text-white shadow-xl"
             : "bg-white border-b border-gray-200 text-gray-900 shadow-lg"
         }`}
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="text-sm font-medium flex items-center">
-            <Settings size={16} className="mr-2" />
+        {/* Menu Header */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="text-xs sm:text-sm font-medium flex items-center">
+            <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Quick Actions
           </div>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className={`p-1 rounded-lg transition-all duration-200 ${
+              Theme
+                ? "hover:bg-gray-800 text-gray-400 hover:text-white"
+                : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+            }`}
+            title="Close Menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="grid grid-cols-2 gap-3 p-4">
+
+        {/* Theme Toggle Section */}
+        <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="text-xs sm:text-sm font-medium">Theme</span>
+            <button
+              onClick={handleThemeToggle}
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 ${
+                Theme
+                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+              }`}
+              title={Theme ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {Theme ? (
+                <Sun className="w-3 h-3 sm:w-4 sm:h-4" />
+              ) : (
+                <Moon className="w-3 h-3 sm:w-4 sm:h-4" />
+              )}
+              <span className="text-xs sm:text-sm font-medium">
+                {Theme ? "Light" : "Dark"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Actions Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 p-3 sm:p-4">
+          {/* Screenshot */}
           <button
             onClick={handleScreenshot}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Take Screenshot"
           >
-            <Camera
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Screenshot</span>
+            <Camera className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Screenshot
+            </span>
           </button>
 
+          {/* Decision Signals */}
           <button
             onClick={handleDecisionSignalsToggle}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               showDecisionSignals
                 ? Theme
-                  ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30"
-                  : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300"
+                  ? "bg-green-900/20 hover:bg-green-900/30 text-green-300 border border-green-700/30 hover:border-green-600/50"
+                  : "bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 hover:border-green-400"
                 : Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Toggle Decision Signals"
           >
-            <ArrowDownUp
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Signals</span>
+            <ArrowDownUp className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Signals
+            </span>
           </button>
 
+          {/* Plotline Trends */}
           <button
             onClick={handlePlotlineToggle}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               showPlotline
                 ? Theme
-                  ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30"
-                  : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300"
+                  ? "bg-purple-900/20 hover:bg-purple-900/30 text-purple-300 border border-purple-700/30 hover:border-purple-600/50"
+                  : "bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 hover:border-purple-400"
                 : Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Toggle Plotline Indicator"
           >
-            <TrendingDown
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Trends</span>
+            <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Trends
+            </span>
           </button>
 
+          {/* Dual Scale */}
           <button
             onClick={handleTwoScaleToggle}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               twoScaleEnabled
                 ? Theme
-                  ? "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30"
-                  : "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300"
+                  ? "bg-orange-900/20 hover:bg-orange-900/30 text-orange-300 border border-orange-700/30 hover:border-orange-600/50"
+                  : "bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 hover:border-orange-400"
                 : Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Toggle Dual Price Scales"
           >
-            <BarChart2
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Dual Scale</span>
+            <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Dual Scale
+            </span>
           </button>
 
+          {/* Reset Zoom */}
           <button
             onClick={onResetZoom}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Reset Zoom"
           >
-            <ZoomIn
-              size={16}
-              className="group-hover:scale-110 transition-transform"
-            />
-            <span className="text-sm font-medium">Reset Zoom</span>
+            <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Reset Zoom
+            </span>
           </button>
 
+          {/* Refresh */}
           <button
             onClick={() => {
               // CHART STABILITY: Soft refresh that doesn't reset chart view state
               console.log("🔄 Triggering soft data refresh (mobile)...");
               // window.location.reload(); // REMOVED: This causes unnecessary page reload
             }}
-            className={`flex items-center justify-center space-x-2 cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               Theme
-                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
+                ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
+            title="Refresh Data"
           >
-            <RefreshCw
-              size={16}
-              className="group-hover:rotate-180 transition-transform duration-500"
-            />
-            <span className="text-sm font-medium">Refresh</span>
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
+            <span className="text-xs sm:text-sm font-medium text-center">
+              Refresh
+            </span>
           </button>
+        </div>
+
+        {/* Menu Footer */}
+        <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-center">
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className={`text-xs sm:text-sm font-medium px-4 py-2 rounded-lg transition-all duration-200 ${
+                Theme
+                  ? "text-gray-400 hover:text-white hover:bg-gray-800"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              Close Menu
+            </button>
+          </div>
         </div>
       </div>
     </div>

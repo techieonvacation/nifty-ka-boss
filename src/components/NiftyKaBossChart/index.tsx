@@ -512,7 +512,19 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   }, []);
 
   return (
-    <div ref={containerRef} className={`flex flex-col ${className}`}>
+    <div ref={containerRef} className={`flex flex-col w-full ${className}`}>
+      {/* Custom CSS for xs breakpoint */}
+      <style jsx>{`
+        @media (min-width: 475px) {
+          .xs\\:inline {
+            display: inline !important;
+          }
+          .xs\\:block {
+            display: block !important;
+          }
+        }
+      `}</style>
+
       <Header
         StockInterval={currentInterval}
         exchange={exchange}
@@ -535,9 +547,10 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         onResistanceChange={handleResistanceChange}
       />
 
-      <div className="relative grid grid-cols-[70%_30%]">
-        {/* Professional Stock Chart - Main Trading View */}
-        <div className="relative flex-1">
+      {/* Mobile-first responsive layout */}
+      <div className="relative flex flex-col lg:grid lg:grid-cols-[70%_30%] w-full">
+        {/* Professional Stock Chart - Main Trading View - Mobile responsive */}
+        <div className="relative flex-1 w-full order-1 lg:order-1">
           <StockChart
             ref={chartRef}
             symbol={symbol}
@@ -558,11 +571,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             onDecisionClick={handleDecisionClick} // DECISION CLICK INTEGRATION: Handle triangle marker clicks
           />
 
-          {/* Stats Panel for Mobile */}
+          {/* Stats Panel for Mobile - Enhanced mobile experience */}
           {showStatsPanel && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30">
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30 p-4">
               <div
-                className={`w-80 max-h-96 overflow-y-auto rounded-lg shadow-xl ${
+                className={`w-full max-w-sm sm:w-80 max-h-[80vh] sm:max-h-96 overflow-y-auto rounded-lg shadow-xl ${
                   theme === "dark"
                     ? "bg-gray-900 text-white"
                     : "bg-white text-gray-900"
@@ -587,9 +600,9 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
           )}
         </div>
 
-        {/* Data Panel - Right Side */}
+        {/* Data Panel - Right Side - Mobile responsive */}
         {showDataPanel && (
-          <div className="h-full">
+          <div className="w-full lg:h-full order-2 lg:order-2">
             <DataPanel
               theme={theme === "light"}
               symbol={symbol}

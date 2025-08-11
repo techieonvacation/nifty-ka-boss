@@ -4,6 +4,7 @@ import BhrahmastraSec from "@/components/Home/BhrahmastraSec";
 import DownloadApp from "@/components/Home/DownloadApp";
 import Pricing from "@/components/Home/Pricing/Pricing";
 import WhyJoinUs from "@/components/Home/WhyJoin";
+import SocialMediaSidebar from "@/components/SocialMediaSidebar";
 import BookPublished from "@/components/ui/BookPublished";
 import Faq from "@/components/ui/Faq";
 import RegisteredBy from "@/components/ui/RegisteredBy";
@@ -25,6 +26,8 @@ export default function Home() {
       <Testimonials />
       <SocialMedia />
       <Faq />
+      {/* <Carecature /> */}
+      <SocialMediaSidebar />
     </main>
   );
 }

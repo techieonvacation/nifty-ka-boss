@@ -9,7 +9,6 @@ import GoogleTagManagerPopup from "./GoogleTagManagerPopup";
 import GoogleAnalytics from "./GoogleAnalytics";
 import TaboolaPixel from "./TaboolaPixel";
 import TaboolaPixel1 from "./TaboolaPixel1";
-import SocialMediaSidebar from "./SocialMediaSidebar";
 import { SessionProvider } from "next-auth/react";
 
 interface MainLayoutWrapperProps {
@@ -37,8 +36,6 @@ export default function MainLayoutWrapper({
       <footer>
         <Footer />
       </footer>
-      {/* <Carecature /> */}
-      <SocialMediaSidebar />
     </>
   );
 }
