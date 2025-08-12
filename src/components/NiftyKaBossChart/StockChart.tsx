@@ -1256,23 +1256,26 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 }
               }
 
-              // IST TIME CONVERSION: Convert IST timestamp to readable IST format for hover display
-              // Since param.time is now in IST, we can convert it directly to IST time
-              const istTime = param.time as number;
-
-              // Format IST time for display (the timestamp is already in IST)
-              const displayTime = new Date(istTime * 1000).toLocaleString(
-                "en-IN",
-                {
-                  timeZone: "Asia/Kolkata",
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }
+              // Get the original datetime from API data for exact display
+              const originalDatetime = timestampToDatetimeMap.current.get(
+                param.time as number
               );
+
+              // Use original API datetime if available, otherwise fallback to formatted time
+              const displayTime =
+                originalDatetime ||
+                new Date((param.time as number) * 1000).toLocaleString(
+                  "en-IN",
+                  {
+                    timeZone: "Asia/Kolkata",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  }
+                );
 
               setHoveredOHLC({
                 time: displayTime,
