@@ -31,15 +31,15 @@ const ClientTimeDisplay: React.FC = () => {
     const updateTime = () => {
       const now = new Date();
       // IST TIME CONVERSION: Display time in IST format
-      const istTime = now.toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
+      const istTime = now.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
       });
       setCurrentTime(istTime);
     };
@@ -219,12 +219,12 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         if (data.length > 0) {
           const latestApiData = data[data.length - 1];
           // IST TIME CONVERSION: Log current time in IST format
-          const currentIstTime = new Date().toLocaleString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
+          const currentIstTime = new Date().toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
           });
           console.log(
             `📊 API Response at ${currentIstTime} IST - Latest candle: ${latestApiData.datetime}, Total candles: ${data.length}`
@@ -258,12 +258,12 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
               hour12: false,
             });
           // IST TIME CONVERSION: Log current time in IST format
-          const currentIstTime = new Date().toLocaleString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
+          const currentIstTime = new Date().toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
           });
           console.log(
             `🕐 Updating candle datetime at ${currentIstTime} IST from API: ${candleDateTime} (was: ${currentCandleData.date})`
@@ -304,16 +304,14 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time data synchronization
     const refreshInterval = setInterval(() => {
       // IST TIME CONVERSION: Log refresh time in IST format
-      const istTime = new Date().toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
+      const istTime = new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
       });
-      console.log(
-        `🔄 Auto-refreshing RKB data at ${istTime} IST...`
-      );
+      console.log(`🔄 Auto-refreshing RKB data at ${istTime} IST...`);
       loadRkbData();
     }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
 
@@ -443,14 +441,17 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
         setRealDecisions(transformedDecisions);
         // IST TIME CONVERSION: Log current time in IST format
-        const currentIstTime = new Date().toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
+        const currentIstTime = new Date().toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
         });
-        console.log(`Loaded real decisions data at ${currentIstTime} IST:`, transformedDecisions);
+        console.log(
+          `Loaded real decisions data at ${currentIstTime} IST:`,
+          transformedDecisions
+        );
       } catch (error) {
         console.error("Error loading decisions data:", error);
         // Don't set fallback data - keep loading state
@@ -465,16 +466,14 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time decisions synchronization
     const decisionsRefreshInterval = setInterval(() => {
       // IST TIME CONVERSION: Log refresh time in IST format
-      const istTime = new Date().toLocaleString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
+      const istTime = new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
       });
-      console.log(
-        `📊 Auto-refreshing decisions data at ${istTime} IST...`
-      );
+      console.log(`📊 Auto-refreshing decisions data at ${istTime} IST...`);
       loadDecisionsData();
     }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
 
@@ -568,14 +567,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     // DISABLED: Simulation is no longer needed with real-time API updates
     // The simulation was causing "08:45" to override the real API datetime "15:15"
     // IST TIME CONVERSION: Log current time in IST format
-    const currentIstTime = new Date().toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
+    const currentIstTime = new Date().toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     });
-    console.log(`📈 Real-time API data mode at ${currentIstTime} IST: Simulation disabled`);
+    console.log(
+      `📈 Real-time API data mode at ${currentIstTime} IST: Simulation disabled`
+    );
   }, []);
 
   return (
@@ -618,6 +619,17 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
       <div className="relative flex flex-col lg:grid lg:grid-cols-[70%_30%] w-full">
         {/* Professional Stock Chart - Main Trading View - Mobile responsive */}
         <div className="relative flex-1 w-full order-1 lg:order-1">
+          {/* RKB Nifty Ka Boss Watermark Overlay */}
+          <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
+            <div
+              className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-wider opacity-10 select-none ${
+                theme === "dark" ? "text-gray-100" : "text-gray-800"
+              }`}
+            >
+              RKB Nifty Ka Boss
+            </div>
+          </div>
+
           <StockChart
             ref={chartRef}
             symbol={symbol}
@@ -643,12 +655,23 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
           {showStatsPanel && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30 p-4">
               <div
-                className={`w-full max-w-sm sm:w-80 max-h-[80vh] sm:max-h-96 overflow-y-auto rounded-lg shadow-xl ${
+                className={`w-full max-w-sm sm:w-80 max-h-[80vh] sm:max-h-96 overflow-y-auto rounded-lg shadow-xl relative ${
                   theme === "dark"
                     ? "bg-gray-900 text-white"
                     : "bg-white text-gray-900"
                 }`}
               >
+                {/* RKB Watermark for Mobile Stats Panel */}
+                <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
+                  <div
+                    className={`text-xl font-bold tracking-wide opacity-5 select-none ${
+                      theme === "dark" ? "text-gray-100" : "text-gray-800"
+                    }`}
+                  >
+                    RKB
+                  </div>
+                </div>
+
                 <DataPanel
                   theme={theme === "light"}
                   symbol={symbol}
@@ -670,7 +693,18 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
         {/* Data Panel - Right Side - Mobile responsive */}
         {showDataPanel && (
-          <div className="w-full lg:h-full order-2 lg:order-2">
+          <div className="w-full lg:h-full order-2 lg:order-2 relative">
+            {/* RKB Watermark for Data Panel */}
+            <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
+              <div
+                className={`text-2xl sm:text-3xl font-bold tracking-wide opacity-5 select-none ${
+                  theme === "dark" ? "text-gray-100" : "text-gray-800"
+                }`}
+              >
+                RKB
+              </div>
+            </div>
+
             <DataPanel
               theme={theme === "light"}
               symbol={symbol}

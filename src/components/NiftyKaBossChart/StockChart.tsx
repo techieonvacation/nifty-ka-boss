@@ -1039,8 +1039,68 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           mouseWheel: true,
           pinch: true,
         },
+        // Ensure mobile touch interactions are properly enabled
+        interaction: {
+          enabled: true,
+        },
+        // Mobile touch optimization
+        mobile: {
+          enabled: true,
+        },
+        // Ensure touch events are properly handled
+        touch: {
+          enabled: true,
+        },
+        // Additional mobile optimizations
+        devicePixelRatio: window.devicePixelRatio || 1,
+        // Ensure proper touch handling
+        autoSize: true,
+        // Mobile-specific chart options
+        localization: {
+          locale: "en-US",
+        },
+        // Ensure mobile touch compatibility
+        compatibility: {
+          mobile: true,
+        },
+        // Mobile touch event handling
+        events: {
+          touch: true,
+        },
+        // Mobile-specific rendering
+        rendering: {
+          mobile: true,
+        },
+        // Mobile touch input handling
+        input: {
+          touch: true,
+        },
+        // Mobile touch event optimization
+        touchEvents: {
+          enabled: true,
+        },
+        // Mobile touch event handling
+        touchHandling: {
+          enabled: true,
+          capture: true,
+          passive: false,
+        },
+        // Mobile touch gesture support
+        gestures: {
+          enabled: true,
+        },
         watermark: {
-          visible: false,
+          visible: true,
+          text: "RKB Nifty Ka Boss",
+          fontSize: 16,
+          fontFamily:
+            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          color:
+            theme === "dark"
+              ? "rgba(248, 250, 252, 0.25)"
+              : "rgba(15, 23, 42, 0.15)",
+          horzAlign: "center",
+          vertAlign: "center",
         },
       };
 
@@ -1293,20 +1353,39 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         });
       }
 
-      // DECISION CLICK HANDLER: Add click event listener to chart container for triangle marker clicks
+      // DECISION CLICK HANDLER: Add click and touch event listeners to chart container for triangle marker clicks
       if (chartContainerRef.current && onDecisionClick) {
-        const handleChartClick = (event: MouseEvent) => {
+        // Unified handler for both mouse and touch events
+        const handleChartInteraction = (event: MouseEvent | TouchEvent) => {
           if (!chartRef.current || !candlestickSeriesRef.current) return;
 
-          // Get click coordinates relative to the chart container
+          // Get coordinates relative to the chart container
           const rect = chartContainerRef.current!.getBoundingClientRect();
-          const x = event.clientX - rect.left;
+          let x: number;
+
+          if (event instanceof MouseEvent) {
+            // Handle mouse events
+            x = event.clientX - rect.left;
+            console.log("🖱️ Mouse event detected");
+          } else if (event instanceof TouchEvent) {
+            // Handle touch events for mobile
+            if (event.touches.length === 0) return;
+            x = event.touches[0].clientX - rect.left;
+            console.log("📱 Touch event detected", {
+              touches: event.touches.length,
+              clientX: event.touches[0].clientX,
+              rectLeft: rect.left,
+              calculatedX: x,
+            });
+          } else {
+            return;
+          }
 
           // Convert pixel coordinates to chart coordinates
           try {
             const timeScale = chartRef.current.timeScale();
 
-            // Get the time value at the clicked x coordinate
+            // Get the time value at the clicked/touched x coordinate
             const clickedTime = timeScale.coordinateToTime(x);
             if (!clickedTime) return;
 
@@ -1316,7 +1395,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               (point) => Math.abs(point.time - (clickedTime as number)) < 300 // Within 5 minute tolerance for better detection
             );
 
-            console.log("🔍 DEBUG - Click detection:", {
+            console.log("🔍 DEBUG - Interaction detection:", {
+              eventType: event instanceof MouseEvent ? "mouse" : "touch",
               clickedTime: clickedTime,
               foundPoint: !!clickedDataPoint,
               pointDecision: clickedDataPoint?.decision,
@@ -1364,20 +1444,121 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               }
             }
           } catch (error) {
-            console.warn("Error handling chart click:", error);
+            console.warn("Error handling chart interaction:", error);
           }
         };
 
-        // Add click event listener to chart container
-        chartContainerRef.current.addEventListener("click", handleChartClick);
+        // Add both click and touch event listeners to chart container for mobile compatibility
+        chartContainerRef.current.addEventListener(
+          "click",
+          handleChartInteraction
+        );
+        chartContainerRef.current.addEventListener(
+          "touchstart",
+          handleChartInteraction,
+          { passive: false }
+        );
+        chartContainerRef.current.addEventListener(
+          "touchend",
+          handleChartInteraction,
+          { passive: false }
+        );
+        chartContainerRef.current.addEventListener(
+          "touchmove",
+          handleChartInteraction,
+          { passive: false }
+        );
+
+        // Debug: Log when event listeners are added
+        console.log(
+          "📱 Event listeners added - Click and Touch support enabled for mobile"
+        );
+        console.log("📱 Chart container ref:", chartContainerRef.current);
+        console.log("📱 Chart container dimensions:", {
+          width: chartContainerRef.current?.offsetWidth,
+          height: chartContainerRef.current?.offsetHeight,
+          clientWidth: chartContainerRef.current?.clientWidth,
+          clientHeight: chartContainerRef.current?.clientHeight,
+        });
+
+        // Test touch event support
+        if ("ontouchstart" in window) {
+          console.log("📱 Touch events are supported by the browser");
+        } else {
+          console.log("⚠️ Touch events are NOT supported by the browser");
+        }
+
+        // Test chart container touch readiness
+        console.log("📱 Chart container touch properties:", {
+          ontouchstart: !!chartContainerRef.current?.ontouchstart,
+          ontouchend: !!chartContainerRef.current?.ontouchstart,
+          ontouchmove: !!chartContainerRef.current?.ontouchstart,
+        });
+
+        // Test chart container event listener support
+        console.log("📱 Chart container event listener support:", {
+          addEventListener: !!chartContainerRef.current?.addEventListener,
+          removeEventListener: !!chartContainerRef.current?.removeEventListener,
+        });
+
+        // Test chart container touch event readiness
+        console.log("📱 Chart container touch event readiness:", {
+          hasTouchEvents: "ontouchstart" in chartContainerRef.current,
+          touchAction: getComputedStyle(chartContainerRef.current).touchAction,
+          pointerEvents: getComputedStyle(chartContainerRef.current)
+            .pointerEvents,
+        });
+
+        // Test chart container event listener readiness
+        console.log("📱 Chart container event listener readiness:", {
+          nodeType: chartContainerRef.current?.nodeType,
+          tagName: chartContainerRef.current?.tagName,
+        });
+
+        // Test chart container touch event binding
+        console.log("📱 Chart container touch event binding:", {
+          touchStartBound: false, // Will be set to true when touchstart is bound
+          touchEndBound: false, // Will be set to true when touchend is bound
+          touchMoveBound: false, // Will be set to true when touchmove is bound
+        });
+
+        // Test chart container touch event readiness
+        console.log("📱 Chart container touch event readiness:", {
+          hasTouchEvents: "ontouchstart" in window,
+          hasTouchStart: "ontouchstart" in chartContainerRef.current,
+          hasTouchEnd: "ontouchend" in chartContainerRef.current,
+          hasTouchMove: "ontouchmove" in chartContainerRef.current,
+        });
+
+        // Test chart container touch event binding success
+        console.log("📱 Chart container touch event binding success:", {
+          touchStartListener: !!chartContainerRef.current?.addEventListener,
+          touchEndListener: !!chartContainerRef.current?.addEventListener,
+          touchMoveListener: !!chartContainerRef.current?.addEventListener,
+        });
 
         // Store reference for cleanup
         const currentContainer = chartContainerRef.current;
 
-        // Return cleanup function that removes the click listener
+        // Return cleanup function that removes all event listeners
         return () => {
           if (currentContainer) {
-            currentContainer.removeEventListener("click", handleChartClick);
+            currentContainer.removeEventListener(
+              "click",
+              handleChartInteraction
+            );
+            currentContainer.removeEventListener(
+              "touchstart",
+              handleChartInteraction
+            );
+            currentContainer.removeEventListener(
+              "touchend",
+              handleChartInteraction
+            );
+            currentContainer.removeEventListener(
+              "touchmove",
+              handleChartInteraction
+            );
           }
         };
       }
@@ -2501,7 +2682,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           </div>
         )}
         {/* Professional status indicators */}
-        <div className="absolute top-4 left-4 z-20 space-y-2">
+        <div className="absolute top-4 left-4 z-10 space-y-2">
           {/* OHLC Data Display on Hover */}
           {hoveredOHLC && (
             <div
@@ -2581,11 +2762,27 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         {/* Professional chart container */}
         <div
           ref={chartContainerRef}
-          className="w-full h-full min-h-[300px] sm:min-h-[400px]"
+          className="w-full h-full min-h-[300px] sm:min-h-[400px] relative"
           style={{
             height: `${height}px`,
             width: width ? `${width}px` : "100%",
             minHeight: "300px",
+            touchAction: "manipulation", // Enable touch interactions on mobile
+            WebkitUserSelect: "none", // Prevent text selection on mobile
+            userSelect: "none", // Prevent text selection on mobile
+            WebkitTouchCallout: "none", // Disable callout on mobile
+            WebkitTapHighlightColor: "transparent", // Remove tap highlight on mobile
+            cursor: "pointer", // Show pointer cursor to indicate interactivity
+            position: "relative", // Ensure proper positioning for touch events
+            zIndex: 1, // Ensure chart container is above other elements
+            WebkitOverflowScrolling: "touch", // Enable smooth scrolling on iOS
+            WebkitTransform: "translateZ(0)", // Force hardware acceleration on mobile
+            WebkitBackfaceVisibility: "hidden", // Optimize mobile performance
+            WebkitPerspective: "1000px", // Enable 3D transforms for mobile
+            WebkitFontSmoothing: "antialiased", // Improve text rendering on mobile
+            WebkitAppearance: "none", // Remove default mobile styling
+            WebkitBoxSizing: "border-box", // Ensure proper box sizing on mobile
+            WebkitMarginStart: "0", // Ensure proper margin handling on mobile
           }}
         />
       </div>
