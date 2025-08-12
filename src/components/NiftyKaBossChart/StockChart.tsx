@@ -58,6 +58,13 @@ interface StockChartProps {
     price: number;
     time: UTCTimestamp;
   }) => void;
+  // TECHNICAL INDICATORS: Add support and resistance values
+  technicalIndicators?: {
+    S1: number; // Support
+    R1: number; // Resistance
+    rkbSupport?: number; // RKB Support
+    rkbResistance?: number; // RKB Resistance
+  };
 }
 
 interface ChartData {
@@ -293,6 +300,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       autoRefresh = true,
       refreshInterval = PERFORMANCE_CONFIG.REFRESH_INTERVAL,
       onDecisionClick,
+      technicalIndicators,
     },
     ref
   ) => {
@@ -313,6 +321,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const plotlineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSegmentsRef = useRef<ISeriesApi<"Line">[]>([]);
     const seriesMarkersPluginRef = useRef<SeriesMarkersPlugin | null>(null);
+
+    // TECHNICAL INDICATORS: Add refs for support and resistance lines
+    const supportLineRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const resistanceLineRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const rkbSupportLineRef = useRef<ISeriesApi<"Line"> | null>(null);
+    const rkbResistanceLineRef = useRef<ISeriesApi<"Line"> | null>(null);
 
     // State management with proper typing
     const [chartState, setChartState] = useState<ChartState>({
@@ -931,117 +945,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
-    /**
-     * Enhanced decision triangle markers using createSeriesMarkers plugin
-     * Creates professional triangle indicators for BUYYES and SELLYES decisions
-     * with optimized colors and positioning for maximum visibility
-     */
-    const createDecisionTriangles = useCallback(
-      (chartData: ChartData[]) => {
-        // Early return if required dependencies are not available
-        if (
-          !chartRef.current ||
-          !showDecisionSignals ||
-          !candlestickSeriesRef.current ||
-          !chartData.length
-        )
-          return;
-
-        // BUG FIX: Enhanced validation to prevent disposal errors
-        try {
-          // Test if chart is still valid by checking a simple property
-          chartRef.current.timeScale();
-        } catch {
-          console.warn(
-            "Chart is disposed, skipping decision triangles creation"
-          );
-          return;
-        }
-
-        // STABILITY: Store view state before making any changes to prevent scrolling
-        const viewState = preserveChartViewState(chartRef.current);
-
-        try {
-          // Initialize series markers plugin if not already created
-          if (!seriesMarkersPluginRef.current) {
-            // Additional safety check before creating markers plugin
-            if (candlestickSeriesRef.current) {
-              seriesMarkersPluginRef.current = createSeriesMarkers(
-                candlestickSeriesRef.current
-              ) as SeriesMarkersPlugin;
-            } else {
-              console.warn("Candlestick series not available for markers");
-              return;
-            }
-          }
-
-          // Filter chart data for specific decision types
-          const buyDecisions = chartData.filter(
-            (data) => data.decision === "BUYYES"
-          );
-          const sellDecisions = chartData.filter(
-            (data) => data.decision === "SELLYES"
-          );
-
-          // Initialize markers array for both buy and sell signals
-          const markersData: unknown[] = [];
-
-          // Create enhanced buy markers (upward triangles)
-          buyDecisions.forEach((data) => {
-            if (data.time && data.close) {
-              markersData.push({
-                time: data.time,
-                position: "belowBar", // Position below candle for clear visibility
-                color: colors.buySignal, // Enhanced bright green color
-                shape: "arrowUp", // Upward pointing triangle
-                text: "BUY", // Hover text for identification
-                size: 1.5, // Increased size for better visibility
-              });
-            }
-          });
-
-          // Create enhanced sell markers (downward triangles)
-          sellDecisions.forEach((data) => {
-            if (data.time && data.close) {
-              markersData.push({
-                time: data.time,
-                position: "aboveBar", // Position above candle for clear visibility
-                color: colors.sellSignal, // Enhanced bright red color
-                shape: "arrowDown", // Downward pointing triangle
-                text: "SELL", // Hover text for identification
-                size: 1.5, // Increased size for better visibility
-              });
-            }
-          });
-
-          // Apply markers to the chart with error handling
-          if (markersData.length > 0 && seriesMarkersPluginRef.current) {
-            seriesMarkersPluginRef.current.setMarkers(markersData);
-
-            // Development logging for debugging purposes
-            console.log(
-              `✅ Triangle Markers Created: ${buyDecisions.length} BUY, ${sellDecisions.length} SELL from ${chartData.length} data points`
-            );
-          } else if (seriesMarkersPluginRef.current) {
-            // Clear markers if no decisions found
-            seriesMarkersPluginRef.current.setMarkers([]);
-            console.log("ℹ️ No decision markers to display");
-          }
-        } catch (error) {
-          console.error("❌ Error creating decision triangles:", error);
-        }
-
-        // STABILITY: Restore view state after all decision triangle operations are complete
-        // Double requestAnimationFrame ensures perfect timing after all chart updates
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
-        });
-      },
-      [showDecisionSignals, colors]
-    );
-
     // Professional chart initialization with optimized options
     const initializeChart = useCallback(() => {
       if (!chartContainerRef.current) return;
@@ -1506,6 +1409,51 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           plotlineSegmentsRef.current = [];
         }
 
+        // TECHNICAL INDICATORS: Clean up support and resistance lines
+        if (supportLineRef.current) {
+          try {
+            if (chartRef.current) {
+              chartRef.current.removeSeries(supportLineRef.current);
+            }
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          supportLineRef.current = null;
+        }
+
+        if (resistanceLineRef.current) {
+          try {
+            if (chartRef.current) {
+              chartRef.current.removeSeries(resistanceLineRef.current);
+            }
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          resistanceLineRef.current = null;
+        }
+
+        if (rkbSupportLineRef.current) {
+          try {
+            if (chartRef.current) {
+              chartRef.current.removeSeries(rkbSupportLineRef.current);
+            }
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          rkbSupportLineRef.current = null;
+        }
+
+        if (rkbResistanceLineRef.current) {
+          try {
+            if (chartRef.current) {
+              chartRef.current.removeSeries(rkbResistanceLineRef.current);
+            }
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          rkbResistanceLineRef.current = null;
+        }
+
         // Clean up series markers plugin
         if (seriesMarkersPluginRef.current) {
           try {
@@ -1539,6 +1487,276 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       handleResize,
       onDecisionClick, // DECISION CLICK HANDLER: Include in dependencies to update click handler when callback changes
     ]);
+
+    // TECHNICAL INDICATORS: Create support and resistance lines function
+    const createTechnicalIndicatorLines = useCallback(
+      (chartData: ChartData[]) => {
+        // Early return if required dependencies are not available
+        if (!chartRef.current || !chartData.length || !technicalIndicators)
+          return;
+
+        // BUG FIX: Enhanced validation to prevent disposal errors
+        try {
+          // Test if chart is still valid by checking a simple property
+          chartRef.current.timeScale();
+        } catch {
+          console.warn(
+            "Chart is disposed, skipping technical indicator lines creation"
+          );
+          return;
+        }
+
+        // STABILITY: Store view state before making any changes to prevent scrolling
+        const viewState = preserveChartViewState(chartRef.current);
+
+        try {
+          // Clear existing technical indicator lines
+          if (supportLineRef.current) {
+            try {
+              chartRef.current.removeSeries(supportLineRef.current);
+            } catch (error) {
+              console.warn("Error removing support line:", error);
+            }
+            supportLineRef.current = null;
+          }
+
+          if (resistanceLineRef.current) {
+            try {
+              chartRef.current.removeSeries(resistanceLineRef.current);
+            } catch (error) {
+              console.warn("Error removing resistance line:", error);
+            }
+            resistanceLineRef.current = null;
+          }
+
+          if (rkbSupportLineRef.current) {
+            try {
+              chartRef.current.removeSeries(rkbSupportLineRef.current);
+            } catch (error) {
+              console.warn("Error removing RKB support line:", error);
+            }
+            rkbSupportLineRef.current = null;
+          }
+
+          if (rkbResistanceLineRef.current) {
+            try {
+              chartRef.current.removeSeries(rkbResistanceLineRef.current);
+            } catch (error) {
+              console.warn("Error removing RKB resistance line:", error);
+            }
+            rkbResistanceLineRef.current = null;
+          }
+
+          // Get time range from chart data
+          const firstTime = chartData[0].time;
+          const lastTime = chartData[chartData.length - 1].time;
+
+          // Create Support line (Dark Green)
+          if (technicalIndicators.S1 && !isNaN(technicalIndicators.S1)) {
+            supportLineRef.current = chartRef.current.addSeries(LineSeries, {
+              color: theme === "dark" ? "#059669" : "#047857", // Dark Green
+              lineWidth: 2,
+              lineStyle: LineStyle.Dashed,
+              title: "Support",
+              priceLineVisible: false,
+              lastValueVisible: false,
+              crosshairMarkerVisible: true,
+            });
+
+            const supportData = [
+              { time: firstTime, value: technicalIndicators.S1 },
+              { time: lastTime, value: technicalIndicators.S1 },
+            ];
+            supportLineRef.current.setData(supportData);
+          }
+
+          // Create Resistance line (Red)
+          if (technicalIndicators.R1 && !isNaN(technicalIndicators.R1)) {
+            resistanceLineRef.current = chartRef.current.addSeries(LineSeries, {
+              color: theme === "dark" ? "#dc2626" : "#b91c1c", // Red
+              lineWidth: 2,
+              lineStyle: LineStyle.Dashed,
+              title: "Resistance",
+              priceLineVisible: false,
+              lastValueVisible: false,
+              crosshairMarkerVisible: true,
+            });
+
+            const resistanceData = [
+              { time: firstTime, value: technicalIndicators.R1 },
+              { time: lastTime, value: technicalIndicators.R1 },
+            ];
+            resistanceLineRef.current.setData(resistanceData);
+          }
+
+          // Create RKB Support line (Black/White based on theme)
+          if (
+            technicalIndicators.rkbSupport &&
+            !isNaN(technicalIndicators.rkbSupport)
+          ) {
+            rkbSupportLineRef.current = chartRef.current.addSeries(LineSeries, {
+              color: theme === "dark" ? "#ffffff" : "#000000", // White for dark theme, Black for light theme
+              lineWidth: 2,
+              lineStyle: LineStyle.Solid,
+              title: "RKB Support",
+              priceLineVisible: false,
+              lastValueVisible: false,
+              crosshairMarkerVisible: true,
+            });
+
+            const rkbSupportData = [
+              { time: firstTime, value: technicalIndicators.rkbSupport },
+              { time: lastTime, value: technicalIndicators.rkbSupport },
+            ];
+            rkbSupportLineRef.current.setData(rkbSupportData);
+          }
+
+          // Create RKB Resistance line (Sky Blue)
+          if (
+            technicalIndicators.rkbResistance &&
+            !isNaN(technicalIndicators.rkbResistance)
+          ) {
+            rkbResistanceLineRef.current = chartRef.current.addSeries(
+              LineSeries,
+              {
+                color: theme === "dark" ? "#0ea5e9" : "#0284c7", // Sky Blue
+                lineWidth: 2,
+                lineStyle: LineStyle.Solid,
+                title: "RKB Resistance",
+                priceLineVisible: false,
+                lastValueVisible: false,
+                crosshairMarkerVisible: true,
+              }
+            );
+
+            const rkbResistanceData = [
+              { time: firstTime, value: technicalIndicators.rkbResistance },
+              { time: lastTime, value: technicalIndicators.rkbResistance },
+            ];
+            rkbResistanceLineRef.current.setData(rkbResistanceData);
+          }
+
+          console.log("✅ Technical indicator lines created successfully");
+        } catch (error) {
+          console.error("❌ Error creating technical indicator lines:", error);
+        }
+
+        // STABILITY: Restore view state after all technical indicator operations are complete
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+        });
+      },
+      [technicalIndicators, theme]
+    );
+
+    // DECISION TRIANGLES: Create decision triangle markers function
+    const createDecisionTriangles = useCallback(
+      (chartData: ChartData[]) => {
+        // Early return if required dependencies are not available
+        if (
+          !chartRef.current ||
+          !showDecisionSignals ||
+          !candlestickSeriesRef.current ||
+          !chartData.length
+        )
+          return;
+
+        // BUG FIX: Enhanced validation to prevent disposal errors
+        try {
+          // Test if chart is still valid by checking a simple property
+          chartRef.current.timeScale();
+        } catch {
+          console.warn(
+            "Chart is disposed, skipping decision triangles creation"
+          );
+          return;
+        }
+
+        // STABILITY: Store view state before making any changes to prevent scrolling
+        const viewState = preserveChartViewState(chartRef.current);
+
+        try {
+          // Initialize series markers plugin if not already created
+          if (!seriesMarkersPluginRef.current) {
+            // Additional safety check before creating markers plugin
+            if (candlestickSeriesRef.current) {
+              seriesMarkersPluginRef.current = createSeriesMarkers(
+                candlestickSeriesRef.current
+              ) as SeriesMarkersPlugin;
+            } else {
+              console.warn("Candlestick series not available for markers");
+              return;
+            }
+          }
+
+          // Filter chart data for specific decision types
+          const buyDecisions = chartData.filter(
+            (data) => data.decision === "BUYYES"
+          );
+          const sellDecisions = chartData.filter(
+            (data) => data.decision === "SELLYES"
+          );
+
+          // Initialize markers array for both buy and sell signals
+          const markersData: unknown[] = [];
+
+          // Create enhanced buy markers (upward triangles)
+          buyDecisions.forEach((data) => {
+            if (data.time && data.close) {
+              markersData.push({
+                time: data.time,
+                position: "belowBar", // Position below candle for clear visibility
+                color: colors.buySignal, // Enhanced bright green color
+                shape: "arrowUp", // Upward pointing triangle
+                text: "BUY", // Hover text for identification
+                size: 1.5, // Increased size for better visibility
+              });
+            }
+          });
+
+          // Create enhanced sell markers (downward triangles)
+          sellDecisions.forEach((data) => {
+            if (data.time && data.close) {
+              markersData.push({
+                time: data.time,
+                position: "aboveBar", // Position above candle for clear visibility
+                color: colors.sellSignal, // Enhanced bright red color
+                shape: "arrowDown", // Downward pointing triangle
+                text: "SELL", // Hover text for identification
+                size: 1.5, // Increased size for better visibility
+              });
+            }
+          });
+
+          // Apply markers to the chart with error handling
+          if (markersData.length > 0 && seriesMarkersPluginRef.current) {
+            seriesMarkersPluginRef.current.setMarkers(markersData);
+
+            // Development logging for debugging purposes
+            console.log(
+              `✅ Triangle Markers Created: ${buyDecisions.length} BUY, ${sellDecisions.length} SELL from ${chartData.length} data points`
+            );
+          } else if (seriesMarkersPluginRef.current) {
+            // Clear markers if no decisions found
+            seriesMarkersPluginRef.current.setMarkers([]);
+            console.log("ℹ️ No decision markers to display");
+          }
+        } catch (error) {
+          console.error("❌ Error creating decision triangles:", error);
+        }
+
+        // STABILITY: Restore view state after all decision triangle operations are complete
+        // Double requestAnimationFrame ensures perfect timing after all chart updates
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+        });
+      },
+      [showDecisionSignals, colors]
+    );
 
     // CHART STABILITY: Enhanced data loading with perfect view state preservation
     const loadData = useCallback(async () => {
@@ -1646,6 +1864,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           createDecisionTriangles(chartData);
         }
 
+        // TECHNICAL INDICATORS: Create support and resistance lines
+        if (technicalIndicators && chartRef.current) {
+          createTechnicalIndicatorLines(chartData);
+        }
+
         // Update current price and change with proper calculations
         if (chartData.length > 0) {
           const latest = chartData[chartData.length - 1];
@@ -1727,6 +1950,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       showDecisionSignals,
       showPlotline,
       colors,
+      technicalIndicators,
+      createTechnicalIndicatorLines,
     ]);
 
     // CHART STABILITY: Initialize chart on mount with enhanced stability
@@ -1929,6 +2154,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         ) {
           createDecisionTriangles(currentChartData.current);
         }
+
+        // TECHNICAL INDICATORS: Update support and resistance lines with new theme colors
+        if (technicalIndicators && currentChartData.current.length > 0) {
+          createTechnicalIndicatorLines(currentChartData.current);
+        }
       }
 
       // STABILITY: Unlock chart position after all theme operations are complete
@@ -1949,6 +2179,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       unlockChartPosition,
       createColoredPlotlineSegments,
       createDecisionTriangles,
+      technicalIndicators,
+      createTechnicalIndicatorLines,
     ]);
 
     /**
@@ -2209,6 +2441,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // Restore exact view state using utility function
       restoreChartViewState(chartRef.current, viewState);
     }, [enableTwoScale, colors]);
+
+    // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
     return (
       <div className={`relative w-full ${className}`}>

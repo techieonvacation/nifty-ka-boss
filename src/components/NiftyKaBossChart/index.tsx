@@ -636,6 +636,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             showDecisionSignals={showDecisionSignals} // Enhanced triangle markers for BUYYES/SELLYES decisions
             autoRefresh={false} // REAL-TIME FIX: Disable StockChart auto-refresh to prevent conflicts (index handles it)
             onDecisionClick={handleDecisionClick} // DECISION CLICK INTEGRATION: Handle triangle marker clicks
+            technicalIndicators={technicalIndicators} // TECHNICAL INDICATORS: Pass support and resistance values
           />
 
           {/* Stats Panel for Mobile - Enhanced mobile experience */}
