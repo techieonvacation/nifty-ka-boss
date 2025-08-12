@@ -24,7 +24,7 @@ interface HeaderProps {
   exchange: string;
   symbol: string;
   setTheme: (theme: boolean) => void;
-  Theme: boolean;
+  Theme?: boolean; // Made optional with default value
   setTakeSnapshot: (snapshot: boolean) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
@@ -55,7 +55,7 @@ const Header = memo(function Header({
   exchange,
   symbol,
   setTheme,
-  Theme,
+  Theme = false, // Default to light mode
   setTakeSnapshot,
   mobileMenuOpen,
   setMobileMenuOpen,
@@ -277,7 +277,7 @@ const Header = memo(function Header({
           {/* Right - Controls - Hidden on mobile */}
           <div className="hidden md:flex gap-2 lg:gap-3 justify-center items-center mx-2 lg:mx-4">
             <div onClick={handleThemeToggle}>
-              <ThemeButton isDark={Theme} onToggle={handleThemeToggle} />
+              <ThemeButton isDark={Theme || false} onToggle={handleThemeToggle} />
             </div>
 
             <button

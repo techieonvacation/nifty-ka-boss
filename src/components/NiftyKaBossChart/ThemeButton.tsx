@@ -2,11 +2,11 @@ import { Moon, Sun } from "lucide-react";
 
 interface ThemeButtonProps {
   className?: string;
-  isDark: boolean;
+  isDark?: boolean; // Made optional with default value
   onToggle: () => void;
 }
 
-export function ThemeButton({ className, isDark, onToggle }: ThemeButtonProps) {
+export function ThemeButton({ className, isDark = false, onToggle }: ThemeButtonProps) {
   return (
     <div
       className={`flex w-16 h-8 p-1 rounded-full cursor-pointer transition-all duration-300 shadow-lg hover:shadow-xl ${

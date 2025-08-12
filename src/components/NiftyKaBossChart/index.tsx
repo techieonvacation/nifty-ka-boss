@@ -30,7 +30,18 @@ const ClientTimeDisplay: React.FC = () => {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setCurrentTime(`${now.toLocaleDateString()} ${now.toLocaleTimeString()}`);
+      // IST TIME CONVERSION: Display time in IST format
+      const istTime = now.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      setCurrentTime(istTime);
     };
 
     // Update immediately
@@ -54,7 +65,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   className = "",
   enableTwoScale = true, // Default to true for two-scale feature
 }) => {
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light"); // Default to light mode
 
   // DECISION CLICK INTEGRATION: State for managing decision popup dialog and highlighting
   const [decisionDialogOpen, setDecisionDialogOpen] = useState(false);
@@ -207,8 +218,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         // REAL-TIME FIX: Log API data info for debugging datetime issues
         if (data.length > 0) {
           const latestApiData = data[data.length - 1];
+          // IST TIME CONVERSION: Log current time in IST format
+          const currentIstTime = new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
           console.log(
-            `📊 API Response - Latest candle: ${latestApiData.datetime}, Total candles: ${data.length}`
+            `📊 API Response at ${currentIstTime} IST - Latest candle: ${latestApiData.datetime}, Total candles: ${data.length}`
           );
         }
 
@@ -226,12 +245,28 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             ((latest.close - previous.close) / previous.close) * 100
           );
 
-          // DATETIME FIX: Update current candle data preserving original datetime format
+          // IST TIME CONVERSION: Update current candle data with IST datetime format
           const candleDateTime =
             latest.originalDatetime ||
-            new Date(latest.time * 1000).toISOString().split("T")[0];
+            new Date(latest.time * 1000).toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            });
+          // IST TIME CONVERSION: Log current time in IST format
+          const currentIstTime = new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
           console.log(
-            `🕐 Updating candle datetime from API: ${candleDateTime} (was: ${currentCandleData.date})`
+            `🕐 Updating candle datetime at ${currentIstTime} IST from API: ${candleDateTime} (was: ${currentCandleData.date})`
           );
 
           setCurrentCandleData({
@@ -268,8 +303,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
     // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time data synchronization
     const refreshInterval = setInterval(() => {
+      // IST TIME CONVERSION: Log refresh time in IST format
+      const istTime = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
       console.log(
-        `🔄 Auto-refreshing RKB data at ${new Date().toLocaleTimeString()}...`
+        `🔄 Auto-refreshing RKB data at ${istTime} IST...`
       );
       loadRkbData();
     }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
@@ -399,7 +442,15 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
           });
 
         setRealDecisions(transformedDecisions);
-        console.log("Loaded real decisions data:", transformedDecisions);
+        // IST TIME CONVERSION: Log current time in IST format
+        const currentIstTime = new Date().toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        console.log(`Loaded real decisions data at ${currentIstTime} IST:`, transformedDecisions);
       } catch (error) {
         console.error("Error loading decisions data:", error);
         // Don't set fallback data - keep loading state
@@ -413,8 +464,16 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
 
     // REAL-TIME FIX: Set up auto-refresh every 30 seconds for faster real-time decisions synchronization
     const decisionsRefreshInterval = setInterval(() => {
+      // IST TIME CONVERSION: Log refresh time in IST format
+      const istTime = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
       console.log(
-        `📊 Auto-refreshing decisions data at ${new Date().toLocaleTimeString()}...`
+        `📊 Auto-refreshing decisions data at ${istTime} IST...`
       );
       loadDecisionsData();
     }, 30000); // Reduced from 60000ms to 30000ms for more responsive updates
@@ -508,7 +567,15 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   useEffect(() => {
     // DISABLED: Simulation is no longer needed with real-time API updates
     // The simulation was causing "08:45" to override the real API datetime "15:15"
-    console.log("📈 Real-time API data mode: Simulation disabled");
+    // IST TIME CONVERSION: Log current time in IST format
+    const currentIstTime = new Date().toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    console.log(`📈 Real-time API data mode at ${currentIstTime} IST: Simulation disabled`);
   }, []);
 
   return (

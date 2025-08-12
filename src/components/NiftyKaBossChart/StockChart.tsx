@@ -74,6 +74,8 @@ interface ChartData {
   originalDatetime?: string; // Raw datetime string from API (e.g., "2015-01-09 09:15")
   originalHighDate?: string; // Raw HighDate string from API (e.g., "Thu, 24 Jul 2025 11:15:00 GMT")
   originalLowDate?: string; // Raw LowDate string from API (e.g., "Thu, 24 Jul 2025 10:15:00 GMT")
+  // IST TIME CONVERSION: Store original UTC time for reference
+  originalUtcTime?: number; // Original UTC timestamp before IST conversion
 }
 
 interface IndicatorData {
@@ -554,13 +556,62 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         const rkbData = await fetchRkbData(true); // Force fresh data for real-time chart updates
         const chartData = convertRkbDataToChartData(rkbData);
 
-        // Limit data points for performance
+        // IST TIME CONVERSION: Convert UTC timestamps to IST for chart display
         const limitedData = chartData
           .slice(-PERFORMANCE_CONFIG.MAX_DATA_POINTS)
-          .map((item) => ({
-            ...item,
-            time: item.time as UTCTimestamp,
-          }));
+          .map((item) => {
+            // Convert UTC timestamp to IST (UTC+5:30)
+            const utcTime = item.time as number;
+            const istTime = utcTime + 5.5 * 60 * 60; // Add 5 hours 30 minutes in seconds
+
+            return {
+              ...item,
+              time: istTime as UTCTimestamp, // Use IST time for chart display
+              originalUtcTime: utcTime, // Store original UTC time for reference
+            };
+          });
+
+        // IST TIME CONVERSION: Log the time conversion for debugging
+        if (limitedData.length > 0) {
+          const firstItem = limitedData[0];
+          const lastItem = limitedData[limitedData.length - 1];
+          const firstUtcTime = new Date(
+            firstItem.originalUtcTime! * 1000
+          ).toISOString();
+          const firstIstTime = new Date(firstItem.time * 1000).toLocaleString(
+            "en-IN",
+            {
+              timeZone: "Asia/Kolkata",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }
+          );
+          const lastUtcTime = new Date(
+            lastItem.originalUtcTime! * 1000
+          ).toISOString();
+          const lastIstTime = new Date(lastItem.time * 1000).toLocaleString(
+            "en-IN",
+            {
+              timeZone: "Asia/Kolkata",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }
+          );
+          console.log(
+            `🕐 IST Time Conversion - First candle: ${firstUtcTime} UTC → ${firstIstTime} IST`
+          );
+          console.log(
+            `🕐 IST Time Conversion - Last candle: ${lastUtcTime} UTC → ${lastIstTime} IST`
+          );
+        }
 
         currentChartData.current = limitedData;
 
@@ -1068,8 +1119,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           lockVisibleTimeRangeOnResize: true, // Maintain view on resize
           borderVisible: true,
           ticksVisible: true,
-          // DATETIME FIX: Time scale will display based on the UTC timestamps we provide
-          // The IST conversion is handled in the data conversion process
+          // IST TIME CONVERSION: Time scale now displays IST time format
+          // The timestamps are converted to IST before being set on the chart
+          timeUnit: "day", // Show day format for better IST readability
+          // Set timezone to IST for proper time display
+          timezone: "Asia/Kolkata",
         },
         handleScroll: {
           mouseWheel: true,
@@ -1299,19 +1353,23 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 }
               }
 
-              // DATETIME FIX: Use original datetime from API instead of converting timestamp
-              const originalDatetime = timestampToDatetimeMap.current.get(
-                param.time as number
+              // IST TIME CONVERSION: Convert IST timestamp to readable IST format for hover display
+              // Since param.time is now in IST, we can convert it directly to IST time
+              const istTime = param.time as number;
+
+              // Format IST time for display (the timestamp is already in IST)
+              const displayTime = new Date(istTime * 1000).toLocaleString(
+                "en-IN",
+                {
+                  timeZone: "Asia/Kolkata",
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }
               );
-
-              // Clean datetime format for display (remove GMT suffix if present)
-              const cleanDatetime = originalDatetime
-                ? originalDatetime.replace(/ GMT$/, "")
-                : null;
-
-              const displayTime =
-                cleanDatetime ||
-                new Date((param.time as number) * 1000).toLocaleDateString(); // Fallback to converted time if original not found
 
               setHoveredOHLC({
                 time: displayTime,
@@ -1347,6 +1405,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (!clickedTime) return;
 
             // Find the chart data point that matches the clicked time
+            // Since clickedTime is now in IST, we need to compare with IST timestamps
             const clickedDataPoint = currentChartData.current.find(
               (point) => Math.abs(point.time - (clickedTime as number)) < 300 // Within 5 minute tolerance for better detection
             );
