@@ -72,7 +72,6 @@ const DataPanel: React.FC<DataPanelProps> = ({
   currentPrice,
   priceChange,
   priceChangePercent,
-  lastUpdate,
   ohlcData,
   lastDecisions,
   technicalIndicators,
@@ -100,6 +99,59 @@ const DataPanel: React.FC<DataPanelProps> = ({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
+
+  // Simple function to get last updated time based on market hours
+  const getLastUpdatedTime = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Market hours: 9:15 AM to 3:30 PM IST
+    const marketStartHour = 9;
+    const marketStartMinute = 15;
+    const marketEndHour = 15; // 3:30 PM
+    const marketEndMinute = 30;
+
+    // Format date as DD/MM/YYYY
+    const day = now.getDate().toString().padStart(2, "0");
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const year = now.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
+
+    // Check if current time is within market hours
+    const isMarketOpen =
+      (currentHour > marketStartHour ||
+        (currentHour === marketStartHour &&
+          currentMinute >= marketStartMinute)) &&
+      (currentHour < marketEndHour ||
+        (currentHour === marketEndHour && currentMinute <= marketEndMinute));
+
+    if (isMarketOpen) {
+      // Market is open, show current time
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return `${dateStr}, ${timeStr}`;
+    } else {
+      // Market is closed, show last market close time
+      const timeStr = "3:30 PM";
+      return `${dateStr}, ${timeStr}`;
+    }
+  };
+
+  // State for last updated time
+  const [lastUpdatedTime, setLastUpdatedTime] = useState(getLastUpdatedTime());
+
+  // Update time every minute when market is open
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdatedTime(getLastUpdatedTime());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   // DECISION CLICK INTEGRATION: Sync external dialog control with internal state
   useEffect(() => {
@@ -556,7 +608,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 }`}
               >
                 <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Last updated at: {lastUpdate}</span>
+                <span>Last updated at: {lastUpdatedTime}</span>
               </div>
             </div>
           </div>
