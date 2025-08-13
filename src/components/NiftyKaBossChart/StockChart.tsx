@@ -257,8 +257,8 @@ const THEME_COLORS = {
     macd: "#06b6d4", // Cyan MACD
     signal: "#f87171", // Red signal line
     plotline: "#fb7185", // Rose plotline
-    // Premium triangle colors with enhanced visibility
-    buySignal: "#06402b", // Vibrant green for buy signals
+    // Premium triangle colors with enhanced visibility - FIXED BUY signal color for better visibility
+    buySignal: "#00ff88", // Bright neon green for maximum visibility of buy signals
     sellSignal: "#c11c84", // Vibrant red for sell signals
   },
   light: {
@@ -275,8 +275,8 @@ const THEME_COLORS = {
     macd: "#0891b2", // Cyan MACD
     signal: "#dc2626", // Red signal
     plotline: "#e11d48", // Rose plotline
-    // Premium triangle colors with high contrast
-    buySignal: "#06402b", // Strong green for buy signals
+    // Premium triangle colors with high contrast - FIXED BUY signal color for better visibility
+    buySignal: "#00a85a", // Bright emerald green for maximum visibility of buy signals
     sellSignal: "#c11c84", // Strong red for sell signals
   },
 } as const;
@@ -1886,16 +1886,16 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           // Initialize markers array for both buy and sell signals
           const markersData: unknown[] = [];
 
-          // Create enhanced buy markers (upward triangles)
+          // Create enhanced buy markers (upward triangles) - FIXED for maximum visibility
           buyDecisions.forEach((data) => {
             if (data.time && data.close) {
               markersData.push({
                 time: data.time,
                 position: "belowBar", // Position below candle for clear visibility
-                color: colors.buySignal, // Enhanced bright green color
+                color: colors.buySignal, // Bright neon/emerald green for maximum visibility
                 shape: "arrowUp", // Upward pointing triangle
                 text: "BUY", // Hover text for identification
-                size: 1.5, // Increased size for better visibility
+                size: 2.0, // Increased size for better visibility - larger than sell signals
               });
             }
           });
