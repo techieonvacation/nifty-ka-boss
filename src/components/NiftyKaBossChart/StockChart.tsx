@@ -116,6 +116,14 @@ interface OHLCData {
   close: number;
   volume?: number;
 }
+interface DecisionMarker {
+  time: number;
+  position: "aboveBar" | "belowBar";
+  color: string;
+  shape: "arrowUp" | "arrowDown";
+  text: string;
+  size: number;
+}
 
 export interface StockChartRef {
   chartRef: React.RefObject<HTMLDivElement>;
@@ -258,7 +266,7 @@ const THEME_COLORS = {
     signal: "#f87171", // Red signal line
     plotline: "#fb7185", // Rose plotline
     // Premium triangle colors with enhanced visibility
-    buySignal: "#06402b", // Vibrant green for buy signals
+    buySignal: "#006400", // Vibrant green for buy signals
     sellSignal: "#c11c84", // Vibrant red for sell signals
   },
   light: {
@@ -276,7 +284,7 @@ const THEME_COLORS = {
     signal: "#dc2626", // Red signal
     plotline: "#e11d48", // Rose plotline
     // Premium triangle colors with high contrast
-    buySignal: "#06402b", // Strong green for buy signals
+    buySignal: "#006400", // Strong green for buy signals
     sellSignal: "#c11c84", // Strong red for sell signals
   },
 } as const;
@@ -1849,8 +1857,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
         // BUG FIX: Enhanced validation to prevent disposal errors
         try {
-          // Test if chart is still valid by checking a simple property
-          chartRef.current.timeScale();
+          chartRef.current.timeScale(); // Will throw if disposed
         } catch {
           console.warn(
             "Chart is disposed, skipping decision triangles creation"
@@ -1858,13 +1865,12 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           return;
         }
 
-        // STABILITY: Store view state before making any changes to prevent scrolling
+        // Store view state to prevent scrolling issues
         const viewState = preserveChartViewState(chartRef.current);
 
         try {
-          // Initialize series markers plugin if not already created
+          // Initialize markers plugin if needed
           if (!seriesMarkersPluginRef.current) {
-            // Additional safety check before creating markers plugin
             if (candlestickSeriesRef.current) {
               seriesMarkersPluginRef.current = createSeriesMarkers(
                 candlestickSeriesRef.current
@@ -1875,55 +1881,54 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             }
           }
 
-          // Filter chart data for specific decision types
-          const buyDecisions = chartData.filter(
-            (data) => data.decision === "BUYYES"
-          );
-          const sellDecisions = chartData.filter(
-            (data) => data.decision === "SELLYES"
-          );
+          // Prepare a map to hold markers by candle time
+          const markersMap = new Map<number, DecisionMarker[]>();
 
-          // Initialize markers array for both buy and sell signals
-          const markersData: unknown[] = [];
+          chartData.forEach((data) => {
+            if (!data.time || !data.close) return;
 
-          // Create enhanced buy markers (upward triangles)
-          buyDecisions.forEach((data) => {
-            if (data.time && data.close) {
-              markersData.push({
+            // Ensure array exists for this time
+            if (!markersMap.has(data.time)) {
+              markersMap.set(data.time, []);
+            }
+
+            if (data.decision === "BUYYES") {
+              markersMap.get(data.time)!.push({
                 time: data.time,
-                position: "belowBar", // Position below candle for clear visibility
-                color: colors.buySignal, // Enhanced bright green color
-                shape: "arrowUp", // Upward pointing triangle
-                text: "BUY", // Hover text for identification
-                size: 1.5, // Increased size for better visibility
+                position: "belowBar",
+                color: colors.buySignal,
+                shape: "arrowUp",
+                text: "BUY",
+                size: 1.5,
+              });
+            }
+
+            if (data.decision === "SELLYES") {
+              markersMap.get(data.time)!.push({
+                time: data.time,
+                position: "aboveBar",
+                color: colors.sellSignal,
+                shape: "arrowDown",
+                text: "SELL",
+                size: 1.5,
               });
             }
           });
 
-          // Create enhanced sell markers (downward triangles)
-          sellDecisions.forEach((data) => {
-            if (data.time && data.close) {
-              markersData.push({
-                time: data.time,
-                position: "aboveBar", // Position above candle for clear visibility
-                color: colors.sellSignal, // Enhanced bright red color
-                shape: "arrowDown", // Downward pointing triangle
-                text: "SELL", // Hover text for identification
-                size: 1.5, // Increased size for better visibility
-              });
-            }
-          });
+          // Flatten all markers into one array
+          const markersData = Array.from(markersMap.values()).flat();
 
-          // Apply markers to the chart with error handling
+          // Apply markers to chart
           if (markersData.length > 0 && seriesMarkersPluginRef.current) {
             seriesMarkersPluginRef.current.setMarkers(markersData);
-
-            // Development logging for debugging purposes
             console.log(
-              `✅ Triangle Markers Created: ${buyDecisions.length} BUY, ${sellDecisions.length} SELL from ${chartData.length} data points`
+              `✅ Triangle Markers Created: ${
+                markersData.filter((m) => m.text === "BUY").length
+              } BUY, ${
+                markersData.filter((m) => m.text === "SELL").length
+              } SELL from ${chartData.length} data points`
             );
           } else if (seriesMarkersPluginRef.current) {
-            // Clear markers if no decisions found
             seriesMarkersPluginRef.current.setMarkers([]);
             console.log("ℹ️ No decision markers to display");
           }
@@ -1931,8 +1936,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           console.error("❌ Error creating decision triangles:", error);
         }
 
-        // STABILITY: Restore view state after all decision triangle operations are complete
-        // Double requestAnimationFrame ensures perfect timing after all chart updates
+        // Restore view state after chart updates
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             restoreChartViewState(chartRef.current, viewState);
@@ -1941,7 +1945,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       },
       [showDecisionSignals, colors]
     );
-
     // CHART STABILITY: Enhanced data loading with perfect view state preservation
     const loadData = useCallback(async () => {
       // STABILITY: Preserve view state before any data operations
