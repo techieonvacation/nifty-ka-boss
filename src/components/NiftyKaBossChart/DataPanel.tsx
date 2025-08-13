@@ -520,18 +520,29 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 ₹{currentPrice.toFixed(2)}
               </div>
               <div className="flex items-center space-x-2 mt-1">
-                {priceChange >= 0 ? (
+                {dailyMovements.length > 0 && dailyMovements[0].change >= 0 ? (
                   <ArrowUp className="text-green-500 w-3 h-3 sm:w-4 sm:h-4" />
                 ) : (
                   <ArrowDown className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
                 )}
                 <span
                   className={`text-sm sm:text-base font-semibold ${
-                    priceChange >= 0 ? "text-green-500" : "text-red-500"
+                    dailyMovements.length > 0 && dailyMovements[0].change >= 0
+                      ? "text-green-500"
+                      : "text-red-500"
                   }`}
                 >
-                  {priceChange >= 0 ? "+" : ""}
-                  {priceChange.toFixed(2)} ({priceChangePercent.toFixed(2)}%)
+                  {dailyMovements.length > 0 && dailyMovements[0].change >= 0
+                    ? "+"
+                    : ""}
+                  {dailyMovements.length > 0
+                    ? dailyMovements[0].change.toFixed(2)
+                    : priceChange.toFixed(2)}{" "}
+                  (
+                  {dailyMovements.length > 0
+                    ? dailyMovements[0].changePercent.toFixed(2)
+                    : priceChangePercent.toFixed(2)}
+                  %)
                 </span>
               </div>
             </div>
@@ -765,7 +776,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <div className={`${theme ? "text-gray-700" : "text-gray-300"}`}>
                   ATR
                 </div>
-                <div className={`${theme ? "text-gray-900" : "text-white"}`}>
+                <div className="text-amber-700">
                   {technicalIndicators.atr.toFixed(2)}
                 </div>
               </div>
@@ -774,7 +785,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <div className={`${theme ? "text-gray-700" : "text-gray-300"}`}>
                   Support
                 </div>
-                <div className="text-red-500">
+                <div className="text-green-700">
                   {technicalIndicators.S1.toFixed(2)}
                 </div>
               </div>
@@ -782,7 +793,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 <div className={`${theme ? "text-gray-700" : "text-gray-300"}`}>
                   Resistance
                 </div>
-                <div className="text-green-500">
+                <div className="text-red-500">
                   {technicalIndicators.R1.toFixed(2)}
                 </div>
               </div>
@@ -794,7 +805,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   >
                     RKB Support
                   </div>
-                  <div className="text-blue-500">
+                  <div className={`${theme ? "text-black" : "text-white"}`}>
                     {technicalIndicators.rkbSupport.toFixed(2)}
                   </div>
                 </div>
@@ -807,7 +818,7 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   >
                     RKB Resistance
                   </div>
-                  <div className="text-orange-500">
+                  <div className="text-sky-500">
                     {technicalIndicators.rkbResistance.toFixed(2)}
                   </div>
                 </div>

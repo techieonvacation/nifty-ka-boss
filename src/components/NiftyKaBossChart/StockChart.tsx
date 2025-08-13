@@ -264,7 +264,7 @@ const THEME_COLORS = {
   light: {
     background: "#fefefe", // Pure white background
     text: "#0f172a",
-    grid: "#C2C2C2", // Very light grid
+    grid: "#DADADA", // Very light grid
     crosshair: "#3b82f6", // Blue crosshair
     upColor: "#059669", // Forest green
     downColor: "#dc2626", // Strong red

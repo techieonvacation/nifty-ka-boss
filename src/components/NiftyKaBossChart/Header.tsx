@@ -168,8 +168,8 @@ const Header = memo(function Header({
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } text-xs sm:text-sm md:text-base font-medium`}
             >
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">{StockInterval}</span>
+              <Clock className="size-4" />
+              <span className="inline-block">{StockInterval}</span>
             </div>
 
             {/* Admin Pivot Management - Only show if user is admin */}
@@ -277,7 +277,10 @@ const Header = memo(function Header({
           {/* Right - Controls - Hidden on mobile */}
           <div className="hidden md:flex gap-2 lg:gap-3 justify-center items-center mx-2 lg:mx-4">
             <div onClick={handleThemeToggle}>
-              <ThemeButton isDark={Theme || false} onToggle={handleThemeToggle} />
+              <ThemeButton
+                isDark={Theme || false}
+                onToggle={handleThemeToggle}
+              />
             </div>
 
             <button

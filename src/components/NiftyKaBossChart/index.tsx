@@ -622,11 +622,11 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
           {/* RKB Nifty Ka Boss Watermark Overlay */}
           <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
             <div
-              className={`text-4xl sm:text-5xl lg:text-6xl font-bold tracking-wider opacity-10 select-none ${
+              className={`text-4xl sm:text-5xl lg:text-8xl font-bold tracking-wider opacity-10 select-none ${
                 theme === "dark" ? "text-gray-100" : "text-gray-800"
               }`}
             >
-              RKB Nifty Ka Boss
+              Nifty Ka Boss
             </div>
           </div>
 
