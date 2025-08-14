@@ -278,26 +278,24 @@ const DataPanel: React.FC<DataPanelProps> = ({
         const movements = await fetchNiftyMovements();
 
         // Transform the API data to match our component's format
-        // Get the last 5 items and reverse them to show newest first
-        const transformedData = movements
-          .slice(-5)
-          .reverse()
-          .map((item: NiftyMovementData) => {
-            // Extract numeric values from strings like "+16.25" and "(+0.06%)"
-            const changeStr = item.change.replace(/[+%]/g, "");
-            const percentStr = item.percent_change.replace(/[()%]/g, "");
+        // Keep all movements for price display, but exclude latest from the 5-day display
+        const allTransformedData = movements.map((item: NiftyMovementData) => {
+          // Extract numeric values from strings like "+16.25" and "(+0.06%)"
+          const changeStr = item.change.replace(/[+%]/g, "");
+          const percentStr = item.percent_change.replace(/[()%]/g, "");
 
-            const change = parseFloat(changeStr);
-            const changePercent = parseFloat(percentStr);
+          const change = parseFloat(changeStr);
+          const changePercent = parseFloat(percentStr);
 
-            return {
-              date: item.date,
-              change: isNaN(change) ? 0 : change,
-              changePercent: isNaN(changePercent) ? 0 : changePercent,
-            };
-          });
+          return {
+            date: item.date,
+            change: isNaN(change) ? 0 : change,
+            changePercent: isNaN(changePercent) ? 0 : changePercent,
+          };
+        });
 
-        setDailyMovements(transformedData);
+        // Store all movements for price display (latest first)
+        setDailyMovements(allTransformedData.reverse());
       } catch (err) {
         console.error("Error fetching nifty movements:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch data");
@@ -760,7 +758,8 @@ const DataPanel: React.FC<DataPanelProps> = ({
                   <div>Days</div>
                   <div>Returns</div>
                 </div>
-                {dailyMovements.map((movement, index) => (
+                {/* Show last 5 movements excluding the latest one */}
+                {dailyMovements.slice(1, 6).map((movement, index) => (
                   <div
                     key={index}
                     className="grid grid-cols-[40%_60%] gap-2 text-xs"
