@@ -45,6 +45,8 @@ interface HeaderProps {
   showPlotline?: boolean;
   setShowPlotline?: (visible: boolean) => void;
   onResetZoom?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   onSupportChange?: (support: number | undefined) => void;
   onResistanceChange?: (resistance: number | undefined) => void;
 }
@@ -69,6 +71,8 @@ const Header = memo(function Header({
   showPlotline = true,
   setShowPlotline,
   onResetZoom,
+  onRefresh,
+  isRefreshing = false,
   onSupportChange,
   onResistanceChange,
 }: HeaderProps) {
@@ -309,9 +313,6 @@ const Header = memo(function Header({
               title="Toggle Decision Signals"
             >
               <ArrowDownUp className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
-              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
-                Signals
-              </span>
             </button>
 
             <button
@@ -328,9 +329,6 @@ const Header = memo(function Header({
               title="Toggle Plotline Indicator"
             >
               <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
-              <span className="text-xs sm:text-sm font-medium hidden sm:inline">
-                Trends
-              </span>
             </button>
 
             <button
@@ -368,24 +366,26 @@ const Header = memo(function Header({
             </button>
 
             <button
-              onClick={() => {
-                // CHART STABILITY: Soft refresh that doesn't reset chart view state
-                // Instead of full page reload, trigger data refresh through parent component
-                console.log("🔄 Triggering soft data refresh...");
-                // Note: Full page reload is kept as fallback, but could be replaced with
-                // a data refresh callback from parent to maintain chart stability
-                // window.location.reload(); // REMOVED: This causes unnecessary page reload
-              }}
+              onClick={onRefresh}
+              disabled={isRefreshing}
               className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
-                Theme
+                isRefreshing
+                  ? Theme
+                    ? "bg-blue-600 text-white border border-blue-500 cursor-not-allowed"
+                    : "bg-blue-600 text-white border border-blue-500 cursor-not-allowed"
+                  : Theme
                   ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600"
                   : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
               } group`}
-              title="Refresh Data"
+              title={isRefreshing ? "Refreshing..." : "Refresh Data (Ctrl+R)"}
             >
-              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 group-hover:rotate-180 transition-transform duration-500" />
+              <RefreshCw
+                className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-500 ${
+                  isRefreshing ? "animate-spin" : "group-hover:rotate-180"
+                }`}
+              />
               <span className="text-xs sm:text-sm font-medium hidden sm:inline">
-                Refresh
+                {isRefreshing ? "Refreshing..." : "Refresh"}
               </span>
             </button>
           </div>
@@ -511,9 +511,6 @@ const Header = memo(function Header({
             title="Toggle Decision Signals"
           >
             <ArrowDownUp className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-            <span className="text-xs sm:text-sm font-medium text-center">
-              Signals
-            </span>
           </button>
 
           {/* Plotline Trends */}
@@ -531,9 +528,6 @@ const Header = memo(function Header({
             title="Toggle Plotline Indicator"
           >
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-            <span className="text-xs sm:text-sm font-medium text-center">
-              Trends
-            </span>
           </button>
 
           {/* Dual Scale */}
@@ -574,21 +568,26 @@ const Header = memo(function Header({
 
           {/* Refresh */}
           <button
-            onClick={() => {
-              // CHART STABILITY: Soft refresh that doesn't reset chart view state
-              console.log("🔄 Triggering soft data refresh (mobile)...");
-              // window.location.reload(); // REMOVED: This causes unnecessary page reload
-            }}
+            onClick={onRefresh}
+            disabled={isRefreshing}
             className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
-              Theme
+              isRefreshing
+                ? Theme
+                  ? "bg-blue-600 text-white border border-blue-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white border border-blue-500 cursor-not-allowed"
+                : Theme
                 ? "bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 hover:border-gray-500"
                 : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 hover:border-gray-400"
             } group`}
-            title="Refresh Data"
+            title={isRefreshing ? "Refreshing..." : "Refresh Data (Ctrl+R)"}
           >
-            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
+            <RefreshCw
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-500 ${
+                isRefreshing ? "animate-spin" : "group-hover:rotate-180"
+              }`}
+            />
             <span className="text-xs sm:text-sm font-medium text-center">
-              Refresh
+              {isRefreshing ? "Refreshing..." : "Refresh"}
             </span>
           </button>
         </div>

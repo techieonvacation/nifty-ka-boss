@@ -78,6 +78,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   const [twoScaleEnabled, setTwoScaleEnabled] = useState(enableTwoScale);
   const [showDecisionSignals, setShowDecisionSignals] = useState(true); // Add state for decision signals visibility
   const [showPlotline, setShowPlotline] = useState(true); // Add state for plotline visibility
+  const [isRefreshing, setIsRefreshing] = useState(false); // Add state for refresh loading indicator
 
   // Chart data state
   const [currentPrice, setCurrentPrice] = useState<number>(24844.55);
@@ -525,6 +526,24 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     setShowPlotline(visible);
   }, []);
 
+  // CHART REFRESH: Handle manual refresh button click to reload chart data
+  const handleRefresh = useCallback(async () => {
+    if (chartRef.current?.refresh) {
+      try {
+        setIsRefreshing(true);
+        console.log("🔄 Manual refresh triggered - reloading chart data...");
+        await chartRef.current.refresh();
+        console.log("✅ Chart data refresh completed successfully");
+      } catch (error) {
+        console.error("❌ Error during manual chart refresh:", error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    } else {
+      console.warn("⚠️ Chart ref not available for refresh");
+    }
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -544,6 +563,10 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         event.preventDefault();
         handleResetZoom();
       }
+      if ((event.ctrlKey || event.metaKey) && event.key === "r") {
+        event.preventDefault();
+        handleRefresh();
+      }
       if (event.key === "Escape") {
         setMobileMenuOpen(false);
         setShowStatsPanel(false);
@@ -559,6 +582,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
     twoScaleEnabled,
     handleTwoScaleToggle,
     handleResetZoom,
+    handleRefresh,
   ]);
 
   // REAL-TIME FIX: Disable simulation since we have real API data updates every 30 seconds
@@ -611,6 +635,8 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
         showPlotline={showPlotline}
         setShowPlotline={handlePlotlineToggle}
         onResetZoom={handleResetZoom}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
         onSupportChange={handleSupportChange}
         onResistanceChange={handleResistanceChange}
       />

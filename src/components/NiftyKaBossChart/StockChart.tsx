@@ -865,8 +865,33 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const createColoredPlotlineSegments = useCallback(
       (chartData: ChartData[]) => {
         // BUG FIX: Enhanced validation to prevent disposal errors
-        if (!chartRef.current || !showPlotline || !chartContainerRef.current)
+        if (!chartRef.current || !chartContainerRef.current) return;
+
+        // If plotline is disabled, clear all segments and return
+        if (!showPlotline) {
+          if (plotlineSegmentsRef.current.length > 0) {
+            plotlineSegmentsRef.current.forEach((series) => {
+              try {
+                if (chartRef.current && series) {
+                  chartRef.current.removeSeries(series);
+                }
+              } catch (error: unknown) {
+                // Silently handle disposal errors
+                const errorMessage =
+                  error instanceof Error ? error.message : "Unknown error";
+                if (errorMessage && !errorMessage.includes("disposed")) {
+                  console.warn(
+                    `Error removing plotline segment:`,
+                    errorMessage
+                  );
+                }
+              }
+            });
+            plotlineSegmentsRef.current = [];
+            console.log("ℹ️ Plotline disabled - clearing segments");
+          }
           return;
+        }
 
         // Additional safety check: ensure chart is not disposed
         try {
@@ -1930,7 +1955,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // Early return if required dependencies are not available
         if (
           !chartRef.current ||
-          !showDecisionSignals ||
           !candlestickSeriesRef.current ||
           !chartData.length
         )
@@ -1960,6 +1984,15 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               console.warn("Candlestick series not available for markers");
               return;
             }
+          }
+
+          // If decision signals are disabled, clear all markers and return
+          if (!showDecisionSignals) {
+            if (seriesMarkersPluginRef.current) {
+              seriesMarkersPluginRef.current.setMarkers([]);
+              console.log("ℹ️ Decision signals disabled - clearing markers");
+            }
+            return;
           }
 
           // Prepare a map to hold markers by candle time
@@ -2177,7 +2210,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       [showSLIndicators, showNewBaseIndicators, colors]
     );
 
-
     // CHART STABILITY: Enhanced data loading with perfect view state preservation
     const loadData = useCallback(async () => {
       // STABILITY: Preserve view state before any data operations
@@ -2273,14 +2305,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
 
         // Set custom plotline indicator with colored segments
-        if (showPlotline && chartRef.current) {
+        if (chartRef.current) {
           createColoredPlotlineSegments(chartData);
         }
 
         // Note: Decision signals are now handled by triangle markers only
 
         // Create triangle markers from chart data decisions
-        if (showDecisionSignals && chartRef.current) {
+        if (chartRef.current) {
           createDecisionTriangles(chartData);
         }
 
@@ -2563,9 +2595,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         (showPlotline || showDecisionSignals) &&
         currentChartData.current.length > 0
       ) {
-        // Update plotline segments with new theme colors if enabled and data exists
+        // Update plotline segments with new theme colors if data exists
         if (
-          showPlotline &&
           currentChartData.current.some(
             (item) => item.plotline !== undefined && !isNaN(item.plotline)
           )
@@ -2573,9 +2604,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           createColoredPlotlineSegments(currentChartData.current);
         }
 
-        // Update decision triangles with new theme colors if enabled and data exists
+        // Update decision triangles with new theme colors if data exists
         if (
-          showDecisionSignals &&
           currentChartData.current.some(
             (item) => item.decision === "BUYYES" || item.decision === "SELLYES"
           )
@@ -2686,16 +2716,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return;
       }
 
-      // OPTIMIZATION: Only perform operations if there's an actual change
-      const hasPlotlineData = currentChartData.current.some(
-        (item) => item.plotline !== undefined && !isNaN(item.plotline)
-      );
-      if (!hasPlotlineData) return; // Skip if no plotline data available
-
-      // OPTIMIZATION: Check if plotline segments already exist and match the current state
-      const plotlineSegmentsExist = plotlineSegmentsRef.current.length > 0;
-      if (plotlineSegmentsExist === showPlotline) return; // Skip if state already matches
-
       // OPTIMIZATION: Skip if initial data load hasn't been completed yet
       if (!initialDataLoaded.current) return;
 
@@ -2742,9 +2762,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       lockChartPosition,
       unlockChartPosition,
       createColoredPlotlineSegments,
-      showSLIndicators,
-      showNewBaseIndicators,
-      createCoordinatedIndicators,
     ]);
 
     // Handle showDecisionSignals prop changes - toggle triangle markers visibility
@@ -2765,16 +2782,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         return;
       }
 
-      // OPTIMIZATION: Only perform operations if there's an actual change
-      const hasDecisionData = currentChartData.current.some(
-        (item) => item.decision === "BUYYES" || item.decision === "SELLYES"
-      );
-      if (!hasDecisionData) return; // Skip if no decision data available
-
-      // OPTIMIZATION: Check if decision markers already exist and match the current state
-      const decisionMarkersExist = seriesMarkersPluginRef.current !== null;
-      if (decisionMarkersExist === showDecisionSignals) return; // Skip if state already matches
-
       // OPTIMIZATION: Skip if initial data load hasn't been completed yet
       if (!initialDataLoaded.current) return;
 
@@ -2789,10 +2796,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // Create triangle markers if enabled using chart data
         createDecisionTriangles(currentChartData.current);
       } else {
-        // Remove markers plugin if disabled without affecting chart view
+        // Clear all decision markers when disabled
         if (seriesMarkersPluginRef.current) {
           seriesMarkersPluginRef.current.setMarkers([]);
-          seriesMarkersPluginRef.current = null;
         }
       }
 
@@ -2806,9 +2812,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       lockChartPosition,
       unlockChartPosition,
       createDecisionTriangles,
-      showSLIndicators,
-      showNewBaseIndicators,
-      createCoordinatedIndicators,
     ]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
