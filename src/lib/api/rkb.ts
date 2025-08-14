@@ -53,6 +53,9 @@ export interface ChartDataPoint {
   plotline?: number;
   trend?: string;
   decision?: string;
+  // NEW INDICATORS: Add SL and New Base fields for chart indicators
+  SL?: number; // Stop Loss value
+  newBase?: string; // New Base indicator (YES/NO or empty string)
   // DATETIME FIX: Preserve original datetime strings from API responses
   originalDatetime?: string; // Raw datetime string from API (e.g., "2015-01-09 09:15")
   originalHighDate?: string; // Raw HighDate string from API (e.g., "Thu, 24 Jul 2025 11:15:00 GMT")
@@ -461,6 +464,9 @@ export function convertRkbDataToChartData(
           item.plotline && !isNaN(item.plotline) ? item.plotline : undefined,
         trend: item.trend || undefined,
         decision: item.decision || undefined,
+        // NEW INDICATORS: Include SL and New Base data from API
+        SL: item.SL && !isNaN(item.SL) ? item.SL : undefined,
+        newBase: item["New Base"] || undefined,
         // DATETIME FIX: Preserve original datetime strings exactly as received from API
         originalDatetime: item.datetime, // Keep raw datetime string (e.g., "2015-01-09 09:15")
         originalHighDate: item.HighDate, // Keep raw HighDate string (e.g., "Thu, 24 Jul 2025 11:15:00 GMT")

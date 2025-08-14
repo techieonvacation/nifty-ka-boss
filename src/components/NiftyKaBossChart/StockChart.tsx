@@ -51,6 +51,9 @@ interface StockChartProps {
   showDecisionSignals?: boolean;
   autoRefresh?: boolean;
   refreshInterval?: number;
+  // NEW INDICATORS: Add props for SL and New Base indicators
+  showSLIndicators?: boolean;
+  showNewBaseIndicators?: boolean;
   // DECISION CLICK HANDLER: Callback for when decision triangle markers are clicked
   onDecisionClick?: (decisionData: {
     decision: "BUY" | "SELL";
@@ -77,6 +80,9 @@ interface ChartData {
   plotline?: number;
   trend?: string;
   decision?: string;
+  // NEW INDICATORS: Add SL and New Base fields for chart indicators
+  SL?: number; // Stop Loss value
+  newBase?: string; // New Base indicator (YES/NO or empty string)
   // DATETIME FIX: Add original datetime fields to match ChartDataPoint interface
   originalDatetime?: string; // Raw datetime string from API (e.g., "2015-01-09 09:15")
   originalHighDate?: string; // Raw HighDate string from API (e.g., "Thu, 24 Jul 2025 11:15:00 GMT")
@@ -118,9 +124,50 @@ interface OHLCData {
 }
 interface DecisionMarker {
   time: number;
-  position: "aboveBar" | "belowBar";
+  position: "aboveBar" | "belowBar" | "inBar";
   color: string;
-  shape: "arrowUp" | "arrowDown";
+  shape:
+    | "diamond"
+    | "circle"
+    | "square"
+    | "arrowUp"
+    | "arrowDown"
+    | "arrowLeft"
+    | "arrowRight";
+  text: string;
+  size: number;
+}
+
+// NEW INDICATORS: Interface for SL (Stop Loss) markers
+interface SLMarker {
+  time: number;
+  position: "aboveBar" | "belowBar" | "inBar";
+  color: string;
+  shape:
+    | "diamond"
+    | "circle"
+    | "square"
+    | "arrowUp"
+    | "arrowDown"
+    | "arrowLeft"
+    | "arrowRight";
+  text: string;
+  size: number;
+}
+
+// NEW INDICATORS: Interface for New Base markers
+interface NewBaseMarker {
+  time: number;
+  position: "aboveBar" | "belowBar" | "inBar";
+  color: string;
+  shape:
+    | "diamond"
+    | "circle"
+    | "square"
+    | "arrowUp"
+    | "arrowDown"
+    | "arrowLeft"
+    | "arrowRight";
   text: string;
   size: number;
 }
@@ -268,6 +315,9 @@ const THEME_COLORS = {
     // Premium triangle colors with enhanced visibility
     buySignal: "#006400", // Vibrant green for buy signals
     sellSignal: "#c11c84", // Vibrant red for sell signals
+    // NEW INDICATORS: Colors for SL and New Base indicators
+    slIndicator: "#ff6b35", // Orange for Stop Loss
+    newBaseIndicator: "#8b5cf6", // Purple for New Base
   },
   light: {
     background: "#fefefe", // Pure white background
@@ -286,6 +336,9 @@ const THEME_COLORS = {
     // Premium triangle colors with high contrast
     buySignal: "#006400", // Strong green for buy signals
     sellSignal: "#c11c84", // Strong red for sell signals
+    // NEW INDICATORS: Colors for SL and New Base indicators
+    slIndicator: "#ea580c", // Dark orange for Stop Loss
+    newBaseIndicator: "#7c3aed", // Dark purple for New Base
   },
 } as const;
 
@@ -307,6 +360,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       showDecisionSignals = true,
       autoRefresh = true,
       refreshInterval = PERFORMANCE_CONFIG.REFRESH_INTERVAL,
+      // NEW INDICATORS: Add props for SL and New Base indicators
+      showSLIndicators = true,
+      showNewBaseIndicators = true,
       onDecisionClick,
       technicalIndicators,
     },
@@ -329,6 +385,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
     const plotlineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
     const plotlineSegmentsRef = useRef<ISeriesApi<"Line">[]>([]);
     const seriesMarkersPluginRef = useRef<SeriesMarkersPlugin | null>(null);
+
+    // NEW INDICATORS: Add refs for SL and New Base markers
+    const slMarkersPluginRef = useRef<SeriesMarkersPlugin | null>(null);
+    const newBaseMarkersPluginRef = useRef<SeriesMarkersPlugin | null>(null);
 
     // TECHNICAL INDICATORS: Add refs for support and resistance lines
     const supportLineRef = useRef<ISeriesApi<"Line"> | null>(null);
@@ -1656,6 +1716,25 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           seriesMarkersPluginRef.current = null;
         }
 
+        // NEW INDICATORS: Clean up SL and New Base marker plugins
+        if (slMarkersPluginRef.current) {
+          try {
+            slMarkersPluginRef.current.setMarkers([]);
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          slMarkersPluginRef.current = null;
+        }
+
+        if (newBaseMarkersPluginRef.current) {
+          try {
+            newBaseMarkersPluginRef.current.setMarkers([]);
+          } catch {
+            // Silently handle disposal errors during cleanup
+          }
+          newBaseMarkersPluginRef.current = null;
+        }
+
         // Dispose chart last
         if (chartRef.current) {
           try {
@@ -1678,6 +1757,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       colors,
       handleResize,
       onDecisionClick, // DECISION CLICK HANDLER: Include in dependencies to update click handler when callback changes
+      showSLIndicators,
+      showNewBaseIndicators,
     ]);
 
     // TECHNICAL INDICATORS: Create support and resistance lines function
@@ -1895,7 +1976,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (data.decision === "BUYYES") {
               markersMap.get(data.time)!.push({
                 time: data.time,
-                position: "belowBar",
+                position: "inBar",
                 color: colors.buySignal,
                 shape: "arrowUp",
                 text: "BUY",
@@ -1906,7 +1987,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (data.decision === "SELLYES") {
               markersMap.get(data.time)!.push({
                 time: data.time,
-                position: "aboveBar",
+                position: "inBar",
                 color: colors.sellSignal,
                 shape: "arrowDown",
                 text: "SELL",
@@ -1945,6 +2026,158 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       },
       [showDecisionSignals, colors]
     );
+
+    // OVERLAP PREVENTION: Function to coordinate indicator positioning and prevent overlap
+    const createCoordinatedIndicators = useCallback(
+      (chartData: ChartData[]) => {
+        // Early return if required dependencies are not available
+        if (
+          !chartRef.current ||
+          !candlestickSeriesRef.current ||
+          !chartData.length
+        )
+          return;
+
+        // BUG FIX: Enhanced validation to prevent disposal errors
+        try {
+          chartRef.current.timeScale(); // Will throw if disposed
+        } catch {
+          console.warn(
+            "Chart is disposed, skipping coordinated indicators creation"
+          );
+          return;
+        }
+
+        // Store view state to prevent scrolling issues
+        const viewState = preserveChartViewState(chartRef.current);
+
+        try {
+          // Initialize markers plugins if needed
+          if (!slMarkersPluginRef.current) {
+            slMarkersPluginRef.current = createSeriesMarkers(
+              candlestickSeriesRef.current
+            ) as SeriesMarkersPlugin;
+          }
+          if (!newBaseMarkersPluginRef.current) {
+            newBaseMarkersPluginRef.current = createSeriesMarkers(
+              candlestickSeriesRef.current
+            ) as SeriesMarkersPlugin;
+          }
+
+          // Prepare maps to hold markers by candle time
+          const slMarkersMap = new Map<number, SLMarker[]>();
+          const newBaseMarkersMap = new Map<number, NewBaseMarker[]>();
+
+          // First pass: collect all indicators
+          chartData.forEach((data) => {
+            if (!data.time || !data.close) return;
+
+            // Collect SL indicators
+            if (
+              (data.decision === "BUYYES" || data.decision === "SELLYES") &&
+              data.SL &&
+              !isNaN(data.SL) &&
+              showSLIndicators
+            ) {
+              if (!slMarkersMap.has(data.time)) {
+                slMarkersMap.set(data.time, []);
+              }
+              slMarkersMap.get(data.time)!.push({
+                time: data.time,
+                position: data.decision === "SELLYES" ? "belowBar" : "aboveBar", // Position based on decision type
+                color: colors.slIndicator,
+                shape: "circle",
+                text: "SL",
+                size: 1.2,
+              });
+            }
+
+            // Collect New Base indicators
+            if (
+              data.newBase &&
+              String(data.newBase).trim() !== "" &&
+              String(data.newBase) !== "0" &&
+              showNewBaseIndicators
+            ) {
+              if (!newBaseMarkersMap.has(data.time)) {
+                newBaseMarkersMap.set(data.time, []);
+              }
+              newBaseMarkersMap.get(data.time)!.push({
+                time: data.time,
+                position: "inBar", // Default position
+                color: colors.newBaseIndicator,
+                shape: "square",
+                text: "NB",
+                size: 1.2,
+              });
+            }
+          });
+
+          // Second pass: resolve overlaps by adjusting positions
+          const allTimes = new Set([
+            ...slMarkersMap.keys(),
+            ...newBaseMarkersMap.keys(),
+          ]);
+
+          allTimes.forEach((time) => {
+            const slMarkers = slMarkersMap.get(time) || [];
+            const newBaseMarkers = newBaseMarkersMap.get(time) || [];
+            const totalBelowBar = slMarkers.length + newBaseMarkers.length;
+
+            // If we have multiple indicators at belowBar, move some to aboveBar
+            if (totalBelowBar > 1) {
+              // Move SL indicators to aboveBar if there are multiple indicators
+              slMarkers.forEach((marker) => {
+                marker.position = "aboveBar";
+              });
+              // Keep New Base indicators at belowBar
+              newBaseMarkers.forEach((marker) => {
+                marker.position = "belowBar";
+              });
+            }
+          });
+
+          // Apply SL markers to chart
+          const slMarkersData = Array.from(slMarkersMap.values()).flat();
+          if (slMarkersData.length > 0 && slMarkersPluginRef.current) {
+            slMarkersPluginRef.current.setMarkers(slMarkersData);
+            console.log(
+              `✅ Coordinated SL Indicators Created: ${slMarkersData.length} SL markers from ${chartData.length} data points`
+            );
+          } else if (slMarkersPluginRef.current) {
+            slMarkersPluginRef.current.setMarkers([]);
+          }
+
+          // Apply New Base markers to chart
+          const newBaseMarkersData = Array.from(
+            newBaseMarkersMap.values()
+          ).flat();
+          if (
+            newBaseMarkersData.length > 0 &&
+            newBaseMarkersPluginRef.current
+          ) {
+            newBaseMarkersPluginRef.current.setMarkers(newBaseMarkersData);
+            console.log(
+              `✅ Coordinated New Base Indicators Created: ${newBaseMarkersData.length} New Base markers from ${chartData.length} data points`
+            );
+          } else if (newBaseMarkersPluginRef.current) {
+            newBaseMarkersPluginRef.current.setMarkers([]);
+          }
+        } catch (error) {
+          console.error("❌ Error creating coordinated indicators:", error);
+        }
+
+        // Restore view state after chart updates
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            restoreChartViewState(chartRef.current, viewState);
+          });
+        });
+      },
+      [showSLIndicators, showNewBaseIndicators, colors]
+    );
+
+
     // CHART STABILITY: Enhanced data loading with perfect view state preservation
     const loadData = useCallback(async () => {
       // STABILITY: Preserve view state before any data operations
@@ -2051,6 +2284,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           createDecisionTriangles(chartData);
         }
 
+        // NEW INDICATORS: Create coordinated SL and New Base indicators
+        if ((showSLIndicators || showNewBaseIndicators) && chartRef.current) {
+          createCoordinatedIndicators(chartData);
+        }
+
         // TECHNICAL INDICATORS: Create support and resistance lines
         if (technicalIndicators && chartRef.current) {
           createTechnicalIndicatorLines(chartData);
@@ -2139,6 +2377,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       colors,
       technicalIndicators,
       createTechnicalIndicatorLines,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
     ]);
 
     // CHART STABILITY: Initialize chart on mount with enhanced stability
@@ -2342,6 +2583,18 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           createDecisionTriangles(currentChartData.current);
         }
 
+        // NEW INDICATORS: Update coordinated indicators with new theme colors if enabled and data exists
+        if (
+          (showSLIndicators || showNewBaseIndicators) &&
+          currentChartData.current.some(
+            (item) =>
+              (item.decision === "BUYYES" || item.decision === "SELLYES") &&
+              item.SL
+          )
+        ) {
+          createCoordinatedIndicators(currentChartData.current);
+        }
+
         // TECHNICAL INDICATORS: Update support and resistance lines with new theme colors
         if (technicalIndicators && currentChartData.current.length > 0) {
           createTechnicalIndicatorLines(currentChartData.current);
@@ -2368,6 +2621,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       createDecisionTriangles,
       technicalIndicators,
       createTechnicalIndicatorLines,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
     ]);
 
     /**
@@ -2406,7 +2662,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         clearInterval(interval);
         console.log("🛑 Auto-refresh interval cleared");
       };
-    }, [autoRefresh, refreshInterval, loadData]);
+    }, [
+      autoRefresh,
+      refreshInterval,
+      loadData,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
+    ]);
 
     // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
@@ -2479,6 +2742,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       lockChartPosition,
       unlockChartPosition,
       createColoredPlotlineSegments,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
     ]);
 
     // Handle showDecisionSignals prop changes - toggle triangle markers visibility
@@ -2540,6 +2806,9 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       lockChartPosition,
       unlockChartPosition,
       createDecisionTriangles,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
     ]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
@@ -2627,7 +2896,13 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       // Restore exact view state using utility function
       restoreChartViewState(chartRef.current, viewState);
-    }, [enableTwoScale, colors]);
+    }, [
+      enableTwoScale,
+      colors,
+      showSLIndicators,
+      showNewBaseIndicators,
+      createCoordinatedIndicators,
+    ]);
 
     // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
