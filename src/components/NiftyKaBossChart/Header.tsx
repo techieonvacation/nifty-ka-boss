@@ -361,7 +361,7 @@ const Header = memo(function Header({
             >
               <ZoomIn className="w-3 h-3 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform" />
               <span className="text-xs sm:text-sm font-medium hidden sm:inline">
-                Reset Zoom
+                Reset
               </span>
             </button>
 

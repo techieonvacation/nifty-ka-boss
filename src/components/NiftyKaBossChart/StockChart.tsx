@@ -2120,7 +2120,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
                 position: data.decision === "SELLYES" ? "belowBar" : "aboveBar", // Position based on decision type
                 color: colors.slIndicator,
                 shape: "circle",
-                text: "SL",
+                text: `SL: ${data.SL.toFixed(2)}`,
                 size: 1.2,
               });
             }
@@ -2137,10 +2137,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               }
               newBaseMarkersMap.get(data.time)!.push({
                 time: data.time,
-                position: "inBar", // Default position
+                position: "belowBar", // Default position
                 color: colors.newBaseIndicator,
                 shape: "square",
-                text: "NB",
+                text: `NB: ${data.newBase}`,
                 size: 1.2,
               });
             }
