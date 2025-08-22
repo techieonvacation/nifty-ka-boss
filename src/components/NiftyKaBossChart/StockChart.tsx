@@ -946,15 +946,17 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         let currentTrend = plotlineData[0].trend || "NEUTRAL";
         let segmentStart = 0;
 
-        // Create colored segments based on trend changes
+        // Create colored segments based on trend changes with no gaps
         for (let i = 1; i < plotlineData.length; i++) {
           const currentItem = plotlineData[i];
           const previousItem = plotlineData[i - 1];
 
           if (currentItem.trend !== previousItem.trend) {
             if (i > segmentStart) {
+              // Include the current point in the previous segment to ensure continuity
+              // This creates overlap and eliminates gaps between segments
               const segmentData = plotlineData
-                .slice(segmentStart, i)
+                .slice(segmentStart, i + 1) // Include current point for overlap
                 .map((item) => ({
                   time: item.time,
                   value: item.plotline!,
@@ -2009,7 +2011,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (data.decision === "BUYYES") {
               markersMap.get(data.time)!.push({
                 time: data.time,
-                position: "inBar",
+                position: "aboveBar",
                 color: colors.buySignal,
                 shape: "arrowUp",
                 text: "BUY",
@@ -2020,7 +2022,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             if (data.decision === "SELLYES") {
               markersMap.get(data.time)!.push({
                 time: data.time,
-                position: "inBar",
+                position: "aboveBar",
                 color: colors.sellSignal,
                 shape: "arrowDown",
                 text: "SELL",
@@ -2101,72 +2103,58 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           const slMarkersMap = new Map<number, SLMarker[]>();
           const newBaseMarkersMap = new Map<number, NewBaseMarker[]>();
 
-          // First pass: collect all indicators
+          // First pass: collect all indicators with conditional logic
           chartData.forEach((data) => {
             if (!data.time || !data.close) return;
 
-            // Collect SL indicators
-            if (
-              (data.decision === "BUYYES" || data.decision === "SELLYES") &&
-              data.SL &&
-              !isNaN(data.SL) &&
-              showSLIndicators
-            ) {
-              if (!slMarkersMap.has(data.time)) {
-                slMarkersMap.set(data.time, []);
+            // Check if this data point has a decision signal
+            const hasDecision =
+              data.decision === "BUYYES" || data.decision === "SELLYES";
+
+            if (hasDecision) {
+              // Parse newBase value to determine which indicator to show
+              let newBaseValue = 0;
+              if (
+                data.newBase &&
+                String(data.newBase).trim() !== "" &&
+                String(data.newBase) !== "0"
+              ) {
+                newBaseValue = parseFloat(String(data.newBase)) || 0;
               }
-              slMarkersMap.get(data.time)!.push({
-                time: data.time,
-                position: data.decision === "SELLYES" ? "belowBar" : "aboveBar", // Position based on decision type
-                color: colors.slIndicator,
-                shape: "circle",
-                text: `SL: ${data.SL.toFixed(2)}`,
-                size: 1.2,
-              });
-            }
 
-            // Collect New Base indicators
-            if (
-              data.newBase &&
-              String(data.newBase).trim() !== "" &&
-              String(data.newBase) !== "0" &&
-              showNewBaseIndicators
-            ) {
-              if (!newBaseMarkersMap.has(data.time)) {
-                newBaseMarkersMap.set(data.time, []);
+              if (newBaseValue > 0) {
+                // When newBase > 0: Show NB and hide SL
+                if (showNewBaseIndicators) {
+                  if (!newBaseMarkersMap.has(data.time)) {
+                    newBaseMarkersMap.set(data.time, []);
+                  }
+                  newBaseMarkersMap.get(data.time)!.push({
+                    time: data.time,
+                    position: "belowBar",
+                    color: colors.newBaseIndicator,
+                    shape: "square",
+                    text: `NB: ${data.newBase}`,
+                    size: 1.2,
+                  });
+                }
+                // Don't add SL marker when newBase > 0
+              } else {
+                // When newBase <= 0: Hide NB and show only SL
+                if (data.SL && !isNaN(data.SL) && showSLIndicators) {
+                  if (!slMarkersMap.has(data.time)) {
+                    slMarkersMap.set(data.time, []);
+                  }
+                  slMarkersMap.get(data.time)!.push({
+                    time: data.time,
+                    position: "belowBar",
+                    color: colors.slIndicator,
+                    shape: "circle",
+                    text: `SL: ${data.SL.toFixed(2)}`,
+                    size: 1.2,
+                  });
+                }
+                // Don't add NB marker when newBase <= 0
               }
-              newBaseMarkersMap.get(data.time)!.push({
-                time: data.time,
-                position: "belowBar", // Default position
-                color: colors.newBaseIndicator,
-                shape: "square",
-                text: `NB: ${data.newBase}`,
-                size: 1.2,
-              });
-            }
-          });
-
-          // Second pass: resolve overlaps by adjusting positions
-          const allTimes = new Set([
-            ...slMarkersMap.keys(),
-            ...newBaseMarkersMap.keys(),
-          ]);
-
-          allTimes.forEach((time) => {
-            const slMarkers = slMarkersMap.get(time) || [];
-            const newBaseMarkers = newBaseMarkersMap.get(time) || [];
-            const totalBelowBar = slMarkers.length + newBaseMarkers.length;
-
-            // If we have multiple indicators at belowBar, move some to aboveBar
-            if (totalBelowBar > 1) {
-              // Move SL indicators to aboveBar if there are multiple indicators
-              slMarkers.forEach((marker) => {
-                marker.position = "aboveBar";
-              });
-              // Keep New Base indicators at belowBar
-              newBaseMarkers.forEach((marker) => {
-                marker.position = "belowBar";
-              });
             }
           });
 

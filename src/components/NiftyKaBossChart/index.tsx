@@ -65,7 +65,25 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
   className = "",
   enableTwoScale = true, // Default to true for two-scale feature
 }) => {
-  const [theme, setTheme] = useState<"light" | "dark">("light"); // Default to light mode
+  // HYDRATION FIX: Initialize theme state to prevent server/client mismatch
+  const [theme, setTheme] = useState<"light" | "dark">("light"); // Start with light theme
+  const [isClient, setIsClient] = useState(false); // Track if component is mounted on client
+
+  // HYDRATION FIX: Set theme from localStorage only after component mounts on client
+  useEffect(() => {
+    setIsClient(true);
+    const savedTheme = localStorage.getItem("nifty-ka-boss-theme");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  // HYDRATION FIX: Save theme to localStorage only after client mount
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem("nifty-ka-boss-theme", theme);
+    }
+  }, [theme, isClient]);
 
   // DECISION CLICK INTEGRATION: State for managing decision popup dialog and highlighting
   const [decisionDialogOpen, setDecisionDialogOpen] = useState(false);

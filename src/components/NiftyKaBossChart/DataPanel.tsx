@@ -685,38 +685,6 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 {ohlcData.close.toFixed(2)}
               </div>
             </div>
-            <div className="">
-              <div
-                className={`text-xs ${
-                  theme ? "text-gray-600" : "text-gray-400"
-                }`}
-              >
-                Vol
-              </div>
-              <div
-                className={`font-medium ${
-                  theme ? "text-gray-900" : "text-white"
-                }`}
-              >
-                {(ohlcData.volume / 1000000).toFixed(1)}M
-              </div>
-            </div>
-            <div className="">
-              <div
-                className={`text-xs ${
-                  theme ? "text-gray-600" : "text-gray-400"
-                }`}
-              >
-                Avg Vol
-              </div>
-              <div
-                className={`font-medium ${
-                  theme ? "text-gray-900" : "text-white"
-                }`}
-              >
-                36.3M
-              </div>
-            </div>
           </div>
         </div>
 
