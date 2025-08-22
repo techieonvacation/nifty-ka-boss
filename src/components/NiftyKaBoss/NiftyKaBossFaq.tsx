@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, MessageCircle } from "lucide-react";
+import {
+  HelpCircle,
+  MessageCircle,
+  Sparkles,
+  Star,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 const faqData = [
   {
@@ -54,49 +62,107 @@ export default function NiftyKaBossFaq() {
   };
 
   return (
-    <div className="min-h-screen py-10 lg:py-16">
-      <div className="container max-w-5xl">
-        <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4 font-urbanist">
+    <div className="relative min-h-screen py-10 overflow-hidden">
+      {/* Beautiful Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50"></div>
+
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Large decorative shapes */}
+        <div className="absolute -top-32 -right-32 w-64 h-64 bg-gradient-to-br from-purple-200/20 to-pink-200/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-gradient-to-tr from-blue-200/15 to-indigo-200/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 right-1/4 w-40 h-40 bg-gradient-to-r from-yellow-200/10 to-orange-200/10 rounded-full blur-2xl animate-slow-spin"></div>
+
+        {/* Floating decorative elements */}
+        <div className="absolute top-20 left-1/4 animate-float">
+          <Star className="w-6 h-6 text-purple-300/30" />
+        </div>
+        <div className="absolute top-1/3 right-20 animate-float-delayed">
+          <Sparkles className="w-8 h-8 text-blue-300/40" />
+        </div>
+        <div className="absolute bottom-1/4 left-16 animate-float">
+          <Zap className="w-7 h-7 text-pink-300/35" />
+        </div>
+        <div className="absolute bottom-32 right-1/3 animate-float-delayed">
+          <HelpCircle className="w-6 h-6 text-indigo-300/30" />
+        </div>
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-60">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 20px 20px, rgba(99, 102, 241, 0.03) 1.5px, transparent 1.5px)`,
+              backgroundSize: "40px 40px",
+            }}
+          ></div>
+        </div>
+      </div>
+
+      <div className="container max-w-5xl relative z-10">
+        <div className="text-center mb-12 sm:mb-16">
+          {/* Top Badge */}
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-200/30 rounded-full px-4 py-2 text-sm font-medium text-purple-600 mb-6">
+            <MessageCircle className="w-4 h-4 text-purple-500" />
+            Frequently Asked Questions
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-700 via-blue-600 to-indigo-700 bg-clip-text text-transparent mb-6 font-urbanist leading-tight">
             FAQs Section: Answers to Get You Started
           </h2>
-          <div className="flex justify-center space-x-2">
+
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed font-inter">
+            Get instant answers to common questions about Nifty Ka Boss and
+            start your trading journey with confidence.
+          </p>
+
+          <div className="flex justify-center space-x-3 mb-4">
             {colors.slice(0, 4).map((color, i) => (
-              <div key={i} className={`w-3 h-3 rounded-full ${color}`}></div>
+              <div
+                key={i}
+                className={`w-4 h-4 rounded-full ${color} animate-pulse`}
+                style={{ animationDelay: `${i * 0.2}s` }}
+              ></div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6 sm:space-y-8">
           {faqData.map((faq, index) => (
             <div
               key={index}
-              className="bg-primary/10 rounded-2xl overflow-hidden border-l-4 border-l-transparent hover:border-l-primary transition-all duration-300"
+              className="group bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden border border-white/50 shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1"
             >
               <button
                 onClick={() => toggleItem(index)}
-                className="w-full px-4 sm:px-6 py-4 sm:py-6 text-left hover:bg-primary/20 transition-colors duration-200 flex justify-between items-center"
+                className="w-full px-6 sm:px-8 py-6 sm:py-8 text-left hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 transition-all duration-300 flex justify-between items-center"
               >
                 <div className="flex items-center">
-                  <div
-                    className={`w-3 h-3 rounded-full ${colors[index]} mr-3 sm:mr-4 flex-shrink-0`}
-                  ></div>
-                  <span className="text-base sm:text-lg font-semibold text-foreground pr-4">
+                  <div className="relative">
+                    <div
+                      className={`w-4 h-4 rounded-full ${colors[index]} mr-4 sm:mr-6 flex-shrink-0 shadow-lg`}
+                    ></div>
+                    <div
+                      className={`absolute inset-0 w-4 h-4 rounded-full ${colors[index]} animate-ping opacity-30`}
+                    ></div>
+                  </div>
+                  <span className="text-base sm:text-lg lg:text-xl font-semibold text-gray-800 pr-4 group-hover:text-purple-700 transition-colors duration-300">
                     {faq.question}
                   </span>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 p-2 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 group-hover:from-purple-200 group-hover:to-pink-200 transition-all duration-300">
                   {openItems.includes(index) ? (
-                    <HelpCircle className="w-5 h-5 text-foreground" />
+                    <ChevronUp className="w-5 h-5 text-purple-600" />
                   ) : (
-                    <MessageCircle className="w-5 h-5 text-foreground" />
+                    <ChevronDown className="w-5 h-5 text-purple-600" />
                   )}
                 </div>
               </button>
               {openItems.includes(index) && (
-                <div className="px-4 sm:px-6 pb-4 sm:pb-6 bg-primary/10">
-                  <div className="ml-7 sm:ml-8">
-                    <p className="text-sm sm:text-base text-foreground leading-relaxed font-dmSans">
+                <div className="px-6 sm:px-8 pb-6 sm:pb-8 bg-gradient-to-r from-purple-50/30 to-pink-50/30 border-t border-purple-100/50 animate-in slide-in-from-top duration-300">
+                  <div className="ml-8 sm:ml-10 relative">
+                    <div className="absolute -left-4 top-2 w-1 h-12 bg-gradient-to-b from-purple-400 to-pink-400 rounded-full opacity-30"></div>
+                    <p className="text-sm sm:text-base lg:text-lg text-gray-700 leading-relaxed font-inter pt-4">
                       {faq.answer}
                     </p>
                   </div>

@@ -1,14 +1,14 @@
 import NiftyKaBossHeroSection from "./HeroSection";
-import NiftyKaBossPricing from "./Pricing";
 import WhyNiftyKaBoss from "./WhyNiftyKaBoss";
+import NiftyKaBossPricing from "./Pricing";
 import NiftyKaBossFaq from "./NiftyKaBossFaq";
 
 export default function NiftyKaBoss() {
   return (
-    <div>
+    <div className="min-h-screen">
       <NiftyKaBossHeroSection />
-      <NiftyKaBossPricing />
       <WhyNiftyKaBoss />
+      <NiftyKaBossPricing />
       <NiftyKaBossFaq />
     </div>
   );

@@ -1,19 +1,82 @@
 "use client";
 
-import { Check, AlertTriangle, Crown } from "lucide-react";
+import {
+  Check,
+  AlertTriangle,
+  Crown,
+  Star,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function NiftyKaBossPricing() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const handlePlanSelection = () => {
+    if (status === "loading") return; // Don't do anything while loading
+    
+    if (session?.user) {
+      // User is authenticated, redirect to external link
+      window.open("https://rakeshbansal.rpy.club/jcp/3vKH8YQCjS", "_blank");
+    } else {
+      // User is not authenticated, redirect to login page
+      router.push("/auth/login");
+    }
+  };
+
   return (
-    <section className="py-20 px-4 bg-white min-h-screen">
-      <div className="container">
+    <section className="relative py-10 min-h-screen overflow-hidden">
+      {/* Beautiful Background with Graphics */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50"></div>
+
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Large decorative circles */}
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-yellow-200/20 to-orange-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-green-100/10 to-blue-100/10 rounded-full blur-3xl animate-slow-spin"></div>
+
+        {/* Floating icons */}
+        <div className="absolute top-20 left-20 animate-float">
+          <TrendingUp className="w-8 h-8 text-blue-300/40" />
+        </div>
+        <div className="absolute top-40 right-32 animate-float-delayed">
+          <Star className="w-6 h-6 text-yellow-300/40" />
+        </div>
+        <div className="absolute bottom-32 left-16 animate-float">
+          <Sparkles className="w-7 h-7 text-purple-300/40" />
+        </div>
+        <div className="absolute bottom-40 right-20 animate-float-delayed">
+          <Crown className="w-8 h-8 text-orange-300/40" />
+        </div>
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-50">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle at 30px 30px, rgba(156, 146, 172, 0.05) 2px, transparent 2px)`,
+              backgroundSize: "60px 60px",
+            }}
+          ></div>
+        </div>
+      </div>
+      <div className="container relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-6 font-urbanist">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-sm border border-blue-200/30 rounded-full px-4 py-2 text-sm font-medium text-blue-600 mb-6">
+            <Crown className="w-4 h-4 text-yellow-500" />
+            Choose Your Trading Success Plan
+          </div>
+          <h2 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-6 font-urbanist">
             Your Plan, Your Success
           </h2>
-          <p className="text-lg text-muted-foreground max-w-4xl mx-auto leading-relaxed font-inter">
+          <p className="text-lg text-gray-600 max-w-4xl mx-auto leading-relaxed font-inter">
             Experience the power of Nifty Ka Boss with pricing plans tailored to
             your trading goals. Our Monthly and Yearly plans offer unbeatable
             value, giving you access to a system trusted by thousands. Choose
@@ -21,10 +84,13 @@ export default function NiftyKaBossPricing() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Monthly Plan */}
-          <Card className="border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-xl">
-            <CardHeader className="border-b border-gray-100 bg-gray-50/50 p-8">
+          <Card className="group border-2 border-gray-200 hover:border-blue-400 transition-all duration-500 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-sm shadow-xl hover:shadow-2xl transform hover:-translate-y-2 relative">
+            {/* Card Background Effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            <CardHeader className="relative border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-blue-50/30 p-8">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-gray-900">
                   Monthly Plan
@@ -46,7 +112,7 @@ export default function NiftyKaBossPricing() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="relative p-8 space-y-8">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-4 text-lg">
                   Features Included:
@@ -91,19 +157,26 @@ export default function NiftyKaBossPricing() {
                 </p>
               </div>
 
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-semibold text-lg transition-colors duration-200">
+              <Button 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-semibold text-lg transition-colors duration-200"
+                onClick={handlePlanSelection}
+              >
                 Choose Monthly Plan
               </Button>
             </CardContent>
           </Card>
 
           {/* Yearly Plan */}
-          <Card className="border-2 border-yellow-300 hover:border-yellow-400 transition-all duration-300 rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-xl relative">
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-center py-3 font-bold">
-              <Crown className="w-5 h-5 inline mr-2" />
+          <Card className="group border-2 border-yellow-300 hover:border-yellow-500 transition-all duration-500 rounded-3xl overflow-hidden bg-white/90 backdrop-blur-sm shadow-2xl hover:shadow-3xl transform hover:-translate-y-3 relative">
+            {/* Premium glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/30 via-orange-100/20 to-red-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 text-black text-center py-3 font-bold z-10">
+              <Crown className="w-5 h-5 inline mr-2 animate-bounce" />
               RECOMMENDED PLAN
+              <Sparkles className="w-4 h-4 inline ml-2 animate-pulse" />
             </div>
-            <CardHeader className="border-b border-gray-100 bg-gradient-to-br from-yellow-50 to-orange-50 p-8 pt-16">
+            <CardHeader className="relative border-b border-gray-100 bg-gradient-to-br from-yellow-50/80 to-orange-50/60 p-8 pt-16">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-gray-900">
                   Yearly Plan
@@ -128,7 +201,7 @@ export default function NiftyKaBossPricing() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="relative p-8 space-y-8">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-4 text-lg">
                   Everything in Monthly, Plus:
@@ -173,7 +246,10 @@ export default function NiftyKaBossPricing() {
                 </p>
               </div>
 
-              <Button className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-200">
+              <Button 
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-200"
+                onClick={handlePlanSelection}
+              >
                 Choose Yearly Plan
               </Button>
             </CardContent>

@@ -45,7 +45,7 @@ export default function Navbar() {
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-white"
       }`}
-    > 
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -125,7 +125,7 @@ export default function Navbar() {
                     variant="primary"
                     size="md"
                     rightIcon={<ChevronRight className="size-5" />}
-                    className="hidden rounded-none lg:flex bg-accent text-accent-foreground hover:bg-accent/80 active:translate-x-0.5 active:translate-y-0.5 hover:shadow-[0.5rem_0.5rem_#F44336,-0.5rem_-0.5rem_#00BCD4] transition"
+                    className="hidden lg:flex bg-accent text-accent-foreground hover:bg-accent/80"
                   >
                     Nifty Ka Boss
                   </Button>
@@ -135,7 +135,7 @@ export default function Navbar() {
                     variant="primary"
                     size="sm"
                     rightIcon={<ChevronRight className="size-5" />}
-                    className="lg:hidden bg-accent rounded-none text-accent-foreground hover:bg-accent/80 active:translate-x-0.5 active:translate-y-0.5 hover:shadow-[0.5rem_0.5rem_#F44336,-0.5rem_-0.5rem_#00BCD4] transition"
+                    className="lg:hidden bg-accent text-accent-foreground hover:bg-accent/80"
                   >
                     Nifty Ka Boss
                   </Button>
