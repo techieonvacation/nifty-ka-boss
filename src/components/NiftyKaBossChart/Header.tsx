@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import PivotManagement from "./PivotManagement";
-import { dummy } from "../../lib/dummy";
+import { fetchRkbData, getLatestActiveDecision } from "../../lib/api/rkb";
 
 interface HeaderProps {
   StockInterval: string;
@@ -77,6 +77,10 @@ const Header = memo(function Header({
   onResistanceChange,
 }: HeaderProps) {
   const { data: session, status } = useSession(); // Get session data to check admin role
+  
+  // State for active decision data
+  const [activeDecision, setActiveDecision] = React.useState<any>(null);
+  const [isLoadingDecision, setIsLoadingDecision] = React.useState(false);
 
   // Session validation for admin features
   React.useEffect(() => {
@@ -89,6 +93,63 @@ const Header = memo(function Header({
       });
     }
   }, [session, status]);
+
+  // Fetch active decision data
+  React.useEffect(() => {
+    const fetchActiveDecision = async () => {
+      try {
+        setIsLoadingDecision(true);
+        const rkbData = await fetchRkbData();
+        const latestActive = getLatestActiveDecision(rkbData);
+        setActiveDecision(latestActive);
+      } catch (error) {
+        console.error("Error fetching active decision:", error);
+        setActiveDecision(null);
+      } finally {
+        setIsLoadingDecision(false);
+      }
+    };
+
+    fetchActiveDecision();
+  }, []);
+
+  // Check if there's an active trade using API data
+  const hasActiveTrade = activeDecision && activeDecision.Status === "open trade";
+
+  // Refresh active decision data
+  const refreshActiveDecision = React.useCallback(async () => {
+    try {
+      setIsLoadingDecision(true);
+      const rkbData = await fetchRkbData(true); // Bust cache for fresh data
+      const latestActive = getLatestActiveDecision(rkbData);
+      setActiveDecision(latestActive);
+    } catch (error) {
+      console.error("Error refreshing active decision:", error);
+      // Keep existing data on error
+    } finally {
+      setIsLoadingDecision(false);
+    }
+  }, []);
+
+  // Periodic refresh for real-time updates (every 30 seconds)
+  React.useEffect(() => {
+    if (!hasActiveTrade) return;
+
+    const intervalId = setInterval(() => {
+      refreshActiveDecision();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [hasActiveTrade, refreshActiveDecision]);
+
+  // Enhanced refresh handler that also refreshes active decision
+  const handleRefresh = React.useCallback(async () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+    // Also refresh active decision data
+    await refreshActiveDecision();
+  }, [onRefresh, refreshActiveDecision]);
 
   // CHART STABILITY: Enhanced screenshot handler with memoization
   const handleScreenshot = React.useCallback(() => {
@@ -126,9 +187,6 @@ const Header = memo(function Header({
 
   // Check if user is admin
   const isAdmin = session?.user?.role === "admin";
-
-  // Check if there's an active trade (for now using dummy data)
-  const hasActiveTrade = dummy.Status === "open trade";
 
   return (
     <div className="relative w-full">
@@ -211,7 +269,7 @@ const Header = memo(function Header({
                         Theme ? "bg-amber-900/30" : "bg-amber-100"
                       }`}
                     >
-                      {dummy.datetime}
+                      {activeDecision?.datetime || "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -221,10 +279,10 @@ const Header = memo(function Header({
                         Theme ? "bg-amber-900/30" : "bg-amber-100"
                       }`}
                     >
-                      ₹{dummy.close_x.toFixed(2)}
+                      ₹{activeDecision?.close_x ? activeDecision.close_x.toFixed(2) : "N/A"}
                     </span>
                   </div>
-                  {parseFloat(dummy["New Base"]) <= 0 && (
+                  {activeDecision && parseFloat(activeDecision["New Base"] || "0") <= 0 && (
                     <div className="flex items-center space-x-1">
                       <span className="font-medium">SL:</span>
                       <span
@@ -232,7 +290,7 @@ const Header = memo(function Header({
                           Theme ? "bg-amber-900/30" : "bg-amber-100"
                         }`}
                       >
-                        ₹{dummy.SL.toFixed(2)}
+                        ₹{activeDecision?.SL ? activeDecision.SL.toFixed(2) : "N/A"}
                       </span>
                     </div>
                   )}
@@ -243,7 +301,7 @@ const Header = memo(function Header({
                         Theme ? "bg-amber-900/30" : "bg-amber-100"
                       }`}
                     >
-                      {dummy["New Base"] || "N/A"}
+                      {activeDecision?.["New Base"] || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -254,7 +312,7 @@ const Header = memo(function Header({
                       : "bg-green-100 text-green-700 border border-green-300"
                   }`}
                 >
-                  Live
+                  {isLoadingDecision ? "Loading..." : "Live"}
                 </div>
               </div>
             )}
@@ -366,7 +424,7 @@ const Header = memo(function Header({
             </button>
 
             <button
-              onClick={onRefresh}
+              onClick={handleRefresh}
               disabled={isRefreshing}
               className={`flex items-center space-x-1 sm:space-x-2 cursor-pointer px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all duration-200 ${
                 isRefreshing
@@ -568,7 +626,7 @@ const Header = memo(function Header({
 
           {/* Refresh */}
           <button
-            onClick={onRefresh}
+            onClick={handleRefresh}
             disabled={isRefreshing}
             className={`flex flex-col items-center justify-center space-y-1 sm:space-y-2 cursor-pointer px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 ${
               isRefreshing

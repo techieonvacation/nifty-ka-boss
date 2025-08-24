@@ -569,6 +569,25 @@ export function getDecisionSignals(data: ChartDataPoint[]): Array<{
     });
 }
 
+// Get latest active decision for Header component display
+export function getLatestActiveDecision(data: RkbDataPoint[]): RkbDataPoint | null {
+  if (!data || data.length === 0) return null;
+  
+  // Find the latest entry with "open trade" status
+  const activeTrades = data.filter(item => item.Status === "open trade");
+  
+  if (activeTrades.length === 0) return null;
+  
+  // Sort by datetime to get the most recent
+  const sortedActiveTrades = activeTrades.sort((a, b) => {
+    const dateA = new Date(a.datetime);
+    const dateB = new Date(b.datetime);
+    return dateB.getTime() - dateA.getTime(); // Descending order
+  });
+  
+  return sortedActiveTrades[0]; // Return the most recent active trade
+}
+
 // BUG FIX: Cleanup function to abort all ongoing requests
 export function abortAllRequests(): void {
   console.log(`Aborting ${abortControllers.size} ongoing requests`);
