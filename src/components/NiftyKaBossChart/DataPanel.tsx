@@ -14,6 +14,7 @@ import {
   type NiftyMovementData,
   fetchDecisions,
   type DecisionData,
+  fetchRkbData,
 } from "@/lib/api/rkb";
 import {
   Dialog,
@@ -100,8 +101,89 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // Simple function to get last updated time based on market hours
-  const getLastUpdatedTime = () => {
+  // State for last updated time based on API data
+  // This will show the actual last candle datetime from the fetch_data API
+  // instead of current time, ensuring accurate display on market closed days
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string>("Loading...");
+
+  // Function to get last updated time based on last candle datetime from API
+  // This ensures that on market closed days (like weekends), it shows the actual
+  // last update time from the API data instead of the current time
+  const getLastUpdatedTimeFromAPI = async () => {
+    try {
+      // Fetch the latest RKB data to get the last candle datetime
+      const rkbData = await fetchRkbData();
+
+      if (rkbData && rkbData.length > 0) {
+        // Sort by datetime to get the most recent entry
+        const sortedData = rkbData.sort((a, b) => {
+          const dateA = new Date(a.datetime);
+          const dateB = new Date(b.datetime);
+          return dateB.getTime() - dateA.getTime(); // Descending order
+        });
+
+        const lastCandle = sortedData[0]; // Most recent entry
+
+        if (lastCandle && lastCandle.datetime) {
+          // Parse the datetime from API (format: "2025-08-22 14:15")
+          const apiDate = new Date(lastCandle.datetime);
+
+          if (!isNaN(apiDate.getTime())) {
+            // Format date as DD/MM/YYYY
+            const day = apiDate.getDate().toString().padStart(2, "0");
+            const month = (apiDate.getMonth() + 1).toString().padStart(2, "0");
+            const year = apiDate.getFullYear();
+            const dateStr = `${day}/${month}/${year}`;
+
+            // Format time as HH:MM AM/PM
+            let timeStr = apiDate.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            });
+
+            // Special case: If time is 3:15 PM, show as 3:30 PM (market close time)
+            if (timeStr === "3:15 PM") {
+              timeStr = "3:30 PM";
+            }
+
+            const formattedTime = `${dateStr}, ${timeStr}`;
+            console.log("🕐 Last Updated Time from API:", {
+              original: lastCandle.datetime,
+              parsed: apiDate.toISOString(),
+              formatted: formattedTime,
+              originalTime: apiDate.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              }),
+              adjustedTime: timeStr,
+            });
+
+            return formattedTime;
+          } else {
+            console.warn("Invalid datetime from API:", lastCandle.datetime);
+          }
+        } else {
+          console.warn("No datetime field in last candle data");
+        }
+      } else {
+        console.warn("No RKB data available for last updated time");
+      }
+
+      // Fallback: if API data is not available, use current time logic
+      console.log("🔄 Using fallback time calculation");
+      return getFallbackLastUpdatedTime();
+    } catch (error) {
+      console.error("Error fetching last updated time from API:", error);
+      // Fallback: if API fails, use current time logic
+      console.log("🔄 Using fallback time calculation due to API error");
+      return getFallbackLastUpdatedTime();
+    }
+  };
+
+  // Fallback function to get last updated time based on market hours (existing logic)
+  const getFallbackLastUpdatedTime = () => {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -141,14 +223,18 @@ const DataPanel: React.FC<DataPanelProps> = ({
     }
   };
 
-  // State for last updated time
-  const [lastUpdatedTime, setLastUpdatedTime] = useState(getLastUpdatedTime());
-
-  // Update time every minute when market is open
+  // Update last updated time from API data
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdatedTime(getLastUpdatedTime());
-    }, 60000); // Update every minute
+    const updateLastUpdatedTime = async () => {
+      const apiTime = await getLastUpdatedTimeFromAPI();
+      setLastUpdatedTime(apiTime);
+    };
+
+    // Initial update
+    updateLastUpdatedTime();
+
+    // Update every minute to keep it current
+    const interval = setInterval(updateLastUpdatedTime, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -606,7 +692,17 @@ const DataPanel: React.FC<DataPanelProps> = ({
                 }`}
               >
                 <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Last updated at: {lastUpdatedTime}</span>
+                <span>
+                  Last updated at:{" "}
+                  {lastUpdatedTime === "Loading..." ? (
+                    <span className="inline-flex items-center space-x-1">
+                      <Loader2 className="animate-spin w-3 h-3" />
+                      <span>Loading...</span>
+                    </span>
+                  ) : (
+                    lastUpdatedTime
+                  )}
+                </span>
               </div>
             </div>
           </div>

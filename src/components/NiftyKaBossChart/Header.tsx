@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import PivotManagement from "./PivotManagement";
-import { fetchRkbData, getLatestActiveDecision } from "../../lib/api/rkb";
+import { fetchRkbData, getLatestActiveDecision, RkbDataPoint } from "../../lib/api/rkb";
 
 interface HeaderProps {
   StockInterval: string;
@@ -79,7 +79,7 @@ const Header = memo(function Header({
   const { data: session, status } = useSession(); // Get session data to check admin role
   
   // State for active decision data
-  const [activeDecision, setActiveDecision] = React.useState<any>(null);
+  const [activeDecision, setActiveDecision] = React.useState<RkbDataPoint | null>(null);
   const [isLoadingDecision, setIsLoadingDecision] = React.useState(false);
 
   // Session validation for admin features
