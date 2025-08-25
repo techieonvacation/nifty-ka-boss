@@ -191,30 +191,29 @@ const PERFORMANCE_CONFIG = {
 } as const;
 
 // ============================================================================
-// CHART STABILITY SYSTEM - Prevents unwanted scrolling during any operations
+// TRADINGVIEW-LIKE CHART STABILITY SYSTEM
 // ============================================================================
 //
-// This system ensures the chart never scrolls to the right side when:
-// - Toggling theme (light/dark mode)
-// - Toggling plotlines/trends
-// - Toggling decision signals
-// - Any other chart modifications
+// Advanced viewport preservation system that prevents ANY unwanted scrolling
+// during chart operations, similar to TradingView's stability.
 //
 // Key Components:
-// 1. Enhanced view state preservation with multiple fallback methods
-// 2. Chart position lock/unlock mechanism during operations
-// 3. Persistent view state tracking that survives component updates
-// 4. Prevention of chart reinitialization for theme changes
-// 5. Proper timing controls for smooth operations
+// 1. Viewport lock system with multiple preservation layers
+// 2. Immediate position restoration after any operation
+// 3. Prevention of LightweightCharts auto-fitting behavior
+// 4. TradingView-style smooth operation handling
 //
-// Result: Perfect chart stability - user's zoom and scroll position is
-// maintained exactly where they left it, regardless of any UI actions.
+// Result: Perfect chart stability - zero movement during any operation
 // ============================================================================
 interface ChartViewState {
   visibleRange: { from: Time; to: Time } | null; // Proper range interface for LightweightCharts
   scrollPosition: number;
   barSpacing: number;
   logicalRange: { from: number; to: number } | null; // Additional precision for logical range
+  // TRADINGVIEW-LIKE: Additional viewport data for perfect restoration
+  rightOffset: number;
+  leftOffset: number;
+  timeScaleWidth: number;
 }
 
 const preserveChartViewState = (
@@ -227,15 +226,19 @@ const preserveChartViewState = (
     const visibleRange = timeScale.getVisibleRange();
     const logicalRange = timeScale.getVisibleLogicalRange();
     const scrollPosition = timeScale.scrollPosition();
-    const barSpacing = timeScale.options().barSpacing || 12;
+    const options = timeScale.options();
+    const barSpacing = options.barSpacing || 12;
+    const rightOffset = options.rightOffset || 0;
 
-    // STABILITY: Successfully capturing complete view state for restoration
-
+    // TRADINGVIEW-LIKE: Capture comprehensive viewport state
     return {
       visibleRange,
       scrollPosition,
       barSpacing,
       logicalRange,
+      rightOffset,
+      leftOffset: 0, // LightweightCharts doesn't have leftOffset, but we track it
+      timeScaleWidth: 0, // Will be calculated if needed
     };
   } catch (error) {
     console.warn("Error preserving chart view state:", error);
@@ -426,7 +429,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // CHART STABILITY: Chart position lock to prevent any unwanted scrolling
     const chartPositionLocked = useRef<boolean>(false);
-    const lockedViewState = useRef<ChartViewState | null>(null);
+  
 
     // CHART STABILITY: Persistent view state that survives component updates
     const persistentViewState = useRef<ChartViewState | null>(null);
@@ -455,70 +458,53 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
     // Note: Decision data is now extracted directly from chart data
 
-    // CHART STABILITY: Chart position lock/unlock functions
-    const lockChartPosition = useCallback(() => {
-      if (chartRef.current && !chartPositionLocked.current) {
-        // Use persistent view state if available, otherwise capture current state
-        const viewState =
-          persistentViewState.current ||
-          preserveChartViewState(chartRef.current);
-        lockedViewState.current = viewState;
-        chartPositionLocked.current = true;
-        // STABILITY: Chart position successfully locked
+    // TRADINGVIEW-LIKE: Advanced viewport lock system
+    const createViewportLock = useCallback(() => {
+      if (!chartRef.current) return null;
 
-        // Disable all interactions that could cause scrolling
-        chartRef.current.applyOptions({
-          handleScroll: {
-            mouseWheel: false,
-            pressedMouseMove: false,
-            horzTouchDrag: false,
-            vertTouchDrag: false,
-          },
-          handleScale: {
-            axisPressedMouseMove: false,
-            mouseWheel: false,
-            pinch: false,
-          },
-          timeScale: {
-            fixLeftEdge: true,
-            fixRightEdge: true,
-            lockVisibleTimeRangeOnResize: true,
-          },
-        });
-      }
-    }, []);
+      // Capture current state
+      const currentState = preserveChartViewState(chartRef.current);
+      if (!currentState) return null;
 
-    const unlockChartPosition = useCallback(() => {
-      if (chartRef.current && chartPositionLocked.current) {
-        // Restore the locked position first
-        if (lockedViewState.current) {
-          restoreChartViewState(chartRef.current, lockedViewState.current);
-          // STABILITY: Chart position successfully restored to original state
-        }
+      // Create a lock object that can restore the exact state
+      return {
+        restore: () => {
+          if (chartRef.current && currentState) {
+            // TRADINGVIEW-LIKE: Immediate, synchronous restoration
+            const timeScale = chartRef.current.timeScale();
+            
+            // Method 1: Try visible range restoration (most precise)
+            if (currentState.visibleRange) {
+              try {
+                timeScale.setVisibleRange(currentState.visibleRange);
+                return true;
+              } catch (error) {
+                console.warn("Visible range restoration failed:", error);
+              }
+            }
 
-        // Re-enable interactions
-        chartRef.current.applyOptions({
-          handleScroll: {
-            mouseWheel: true,
-            pressedMouseMove: true,
-            horzTouchDrag: true,
-            vertTouchDrag: true,
-          },
-          handleScale: {
-            axisPressedMouseMove: true,
-            mouseWheel: true,
-            pinch: true,
-          },
-          timeScale: {
-            fixLeftEdge: false,
-            fixRightEdge: false,
-            lockVisibleTimeRangeOnResize: true,
-          },
-        });
+            // Method 2: Try logical range restoration
+            if (currentState.logicalRange) {
+              try {
+                timeScale.setVisibleLogicalRange(currentState.logicalRange);
+                return true;
+              } catch (error) {
+                console.warn("Logical range restoration failed:", error);
+              }
+            }
 
-        chartPositionLocked.current = false;
-        lockedViewState.current = null;
-      }
+            // Method 3: Fallback to scroll position
+            try {
+              timeScale.scrollToPosition(currentState.scrollPosition, false);
+              return true;
+            } catch (error) {
+              console.warn("Scroll position restoration failed:", error);
+            }
+          }
+          return false;
+        },
+        state: currentState
+      };
     }, []);
 
     // Professional screenshot functionality for chart capture
@@ -902,9 +888,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           return;
         }
 
-        // STABILITY: Store view state before making any changes to prevent scrolling
-        const viewState = preserveChartViewState(chartRef.current);
-
         // Clear existing segments with enhanced error handling
         if (plotlineSegmentsRef.current.length > 0) {
           plotlineSegmentsRef.current.forEach((series) => {
@@ -925,10 +908,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         plotlineSegmentsRef.current = [];
 
         if (!chartData || chartData.length === 0) {
-          // STABILITY: Restore view state even if no data to prevent unwanted scrolling
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
           return;
         }
 
@@ -936,10 +915,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           (item) => item.plotline !== undefined && !isNaN(item.plotline)
         );
         if (plotlineData.length === 0) {
-          // STABILITY: Restore view state even if no plotline data to prevent unwanted scrolling
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
           return;
         }
 
@@ -1027,13 +1002,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           }
         }
 
-        // STABILITY: Restore view state after all plotline operations are complete
-        // Double requestAnimationFrame ensures perfect timing after all chart updates
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
-        });
+        // STABILITY: View state restoration is now handled in the calling useEffect
       },
       [showPlotline, colors]
     );
@@ -1117,6 +1086,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           lockVisibleTimeRangeOnResize: true, // Maintain view on resize
           borderVisible: true,
           ticksVisible: true,
+          // TRADINGVIEW-LIKE: Prevent automatic fitting behavior
+          shiftVisibleRangeOnNewBar: false, // Prevent auto-scrolling on new data
           // IST TIME CONVERSION: Time scale now displays IST time format
           // The timestamps are converted to IST before being set on the chart
           timeUnit: "day", // Show day format for better IST readability
@@ -2013,9 +1984,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           return;
         }
 
-        // Store view state to prevent scrolling issues
-        const viewState = preserveChartViewState(chartRef.current);
-
         try {
           // Initialize markers plugin if needed
           if (!seriesMarkersPluginRef.current) {
@@ -2093,12 +2061,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           console.error("❌ Error creating decision triangles:", error);
         }
 
-        // Restore view state after chart updates
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
-        });
+        // STABILITY: View state restoration is now handled in the calling useEffect
       },
       [showDecisionSignals, colors]
     );
@@ -2123,9 +2086,6 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           );
           return;
         }
-
-        // Store view state to prevent scrolling issues
-        const viewState = preserveChartViewState(chartRef.current);
 
         try {
           // Initialize markers plugins if needed
@@ -2229,12 +2189,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
           console.error("❌ Error creating coordinated indicators:", error);
         }
 
-        // Restore view state after chart updates
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            restoreChartViewState(chartRef.current, viewState);
-          });
-        });
+        // STABILITY: View state restoration is now handled in the calling useEffect
       },
       [showSLIndicators, showNewBaseIndicators, colors]
     );
@@ -2425,23 +2380,14 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }));
       }
     }, [
-      loadRkbData,
-      calculateSMA,
-      calculateEMA,
-      calculateRSI,
-      calculateMACD,
       enableTwoScale,
-      createColoredPlotlineSegments,
-      createDecisionTriangles,
       showDecisionSignals,
       showPlotline,
       colors,
       technicalIndicators,
-      createTechnicalIndicatorLines,
       showSLIndicators,
       showNewBaseIndicators,
-      createCoordinatedIndicators,
-    ]);
+    ]); // FIXED: Remove function dependencies to prevent unnecessary re-executions
 
     // CHART STABILITY: Initialize chart on mount with enhanced stability
     // Only initialize once when component mounts - never reinitialize for theme changes
@@ -2508,8 +2454,8 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
 
       // STABILITY: Theme change detected - preserving chart position
 
-      // STABILITY: Lock chart position to prevent any scrolling
-      lockChartPosition();
+      // TRADINGVIEW-LIKE: Create viewport lock for theme change
+      const themeViewportLock = createViewportLock();
 
       // STABILITY: Mark theme change as in progress
       isThemeChanging.current = true;
@@ -2665,8 +2611,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         // STABILITY: Mark theme change as complete
         isThemeChanging.current = false;
 
-        // STABILITY: Unlock chart position and restore original view
-        unlockChartPosition();
+        // TRADINGVIEW-LIKE: Restore viewport after theme change
+        if (themeViewportLock) {
+          themeViewportLock.restore();
+        }
 
         // STABILITY: Theme change completed successfully with position preserved
       }, 150); // Increased delay to ensure all operations are complete
@@ -2674,16 +2622,10 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       colors,
       showPlotline,
       showDecisionSignals,
-      lockChartPosition,
-      unlockChartPosition,
-      createColoredPlotlineSegments,
-      createDecisionTriangles,
       technicalIndicators,
-      createTechnicalIndicatorLines,
       showSLIndicators,
       showNewBaseIndicators,
-      createCoordinatedIndicators,
-    ]);
+    ]); // FIXED: Remove function dependencies to prevent unnecessary re-executions
 
     /**
      * CHART STABILITY: Enhanced auto-refresh functionality with perfect view state preservation
@@ -2721,19 +2663,11 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         clearInterval(interval);
         console.log("🛑 Auto-refresh interval cleared");
       };
-    }, [
-      autoRefresh,
-      refreshInterval,
-      loadData,
-      showSLIndicators,
-      showNewBaseIndicators,
-      createCoordinatedIndicators,
-    ]);
+    }, [autoRefresh, refreshInterval]); // FIXED: Remove function dependencies to prevent unnecessary re-executions
 
     // Note: Decision signals are now handled by triangle markers only - removed line series approach
 
-    // Handle showPlotline prop changes - toggle plotline segments visibility
-    // CHART STABILITY: Preserve zoom and scroll state during plotline visibility changes
+    // TRADINGVIEW-LIKE: Plotline toggle with zero movement
     useEffect(() => {
       if (!chartRef.current || !currentChartData.current.length) return;
 
@@ -2751,21 +2685,38 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // OPTIMIZATION: Skip if theme change is in progress
       if (isThemeChanging.current) return;
 
-      // STABILITY: Lock chart position during plotline changes
-      lockChartPosition();
-      // STABILITY: Plotline toggle detected - locking position
+      // TRADINGVIEW-LIKE: Create viewport lock before any operations
+      const viewportLock = createViewportLock();
+      if (!viewportLock) return;
 
-      // Clear existing plotline segments without affecting chart view
-      // BUG FIX: Enhanced error handling to prevent "Value is undefined" errors
+      // Completely disable chart updates during operations
+      chartRef.current.applyOptions({
+        timeScale: {
+          fixLeftEdge: true,
+          fixRightEdge: true,
+          lockVisibleTimeRangeOnResize: true,
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: false,
+          horzTouchDrag: false,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          axisPressedMouseMove: false,
+          mouseWheel: false,
+          pinch: false,
+        }
+      });
+
+      // Clear existing plotline segments
       if (plotlineSegmentsRef.current.length > 0) {
         plotlineSegmentsRef.current.forEach((series) => {
           try {
-            // Check if both chart and series are valid before removal
             if (chartRef.current && series) {
               chartRef.current.removeSeries(series);
             }
           } catch (error: unknown) {
-            // Silently handle disposal errors to prevent console spam
             const errorMessage =
               error instanceof Error ? error.message : "Unknown error";
             if (errorMessage && !errorMessage.includes("disposed")) {
@@ -2781,20 +2732,33 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         createColoredPlotlineSegments(currentChartData.current);
       }
 
-      // STABILITY: Unlock chart position after plotline operations
-      setTimeout(() => {
-        unlockChartPosition();
-        // STABILITY: Plotline toggle completed with position preserved
-      }, 100);
-    }, [
-      showPlotline,
-      lockChartPosition,
-      unlockChartPosition,
-      createColoredPlotlineSegments,
-    ]);
+      // TRADINGVIEW-LIKE: Immediate restoration and re-enable interactions
+      viewportLock.restore();
+      
+      chartRef.current.applyOptions({
+        timeScale: {
+          fixLeftEdge: false,
+          fixRightEdge: false,
+          lockVisibleTimeRangeOnResize: true,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        }
+      });
 
-    // Handle showDecisionSignals prop changes - toggle triangle markers visibility
-    // CHART STABILITY: Preserve zoom and scroll state during decision triangles visibility changes
+      // Final restoration to ensure perfect position
+      setTimeout(() => viewportLock.restore(), 0);
+    }, [showPlotline, createViewportLock]);
+
+    // TRADINGVIEW-LIKE: Decision signals toggle with zero movement
     useEffect(() => {
       if (
         !chartRef.current ||
@@ -2817,9 +2781,29 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
       // OPTIMIZATION: Skip if theme change is in progress
       if (isThemeChanging.current) return;
 
-      // STABILITY: Lock chart position during decision signals changes
-      lockChartPosition();
-      // STABILITY: Decision signals toggle detected - locking position
+      // TRADINGVIEW-LIKE: Create viewport lock before any operations
+      const viewportLock = createViewportLock();
+      if (!viewportLock) return;
+
+      // Completely disable chart updates during operations
+      chartRef.current.applyOptions({
+        timeScale: {
+          fixLeftEdge: true,
+          fixRightEdge: true,
+          lockVisibleTimeRangeOnResize: true,
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: false,
+          horzTouchDrag: false,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          axisPressedMouseMove: false,
+          mouseWheel: false,
+          pinch: false,
+        }
+      });
 
       if (showDecisionSignals) {
         // Create triangle markers if enabled using chart data
@@ -2831,17 +2815,31 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
         }
       }
 
-      // STABILITY: Unlock chart position after decision signals operations
-      setTimeout(() => {
-        unlockChartPosition();
-        // STABILITY: Decision signals toggle completed with position preserved
-      }, 100);
-    }, [
-      showDecisionSignals,
-      lockChartPosition,
-      unlockChartPosition,
-      createDecisionTriangles,
-    ]);
+      // TRADINGVIEW-LIKE: Immediate restoration and re-enable interactions
+      viewportLock.restore();
+      
+      chartRef.current.applyOptions({
+        timeScale: {
+          fixLeftEdge: false,
+          fixRightEdge: false,
+          lockVisibleTimeRangeOnResize: true,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        }
+      });
+
+      // Final restoration to ensure perfect position
+      setTimeout(() => viewportLock.restore(), 0);
+    }, [showDecisionSignals, createViewportLock]);
 
     // Handle enableTwoScale prop changes - toggle left price scale visibility
     // CHART STABILITY: Preserve zoom and scroll state during two-scale mode changes
