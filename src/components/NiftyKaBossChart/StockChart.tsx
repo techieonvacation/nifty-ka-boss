@@ -665,7 +665,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             {
               timeZone: "Asia/Kolkata",
               year: "numeric",
-              month: "2-digit",
+              month: "short",
               day: "2-digit",
               hour: "2-digit",
               minute: "2-digit",
@@ -680,7 +680,7 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
             {
               timeZone: "Asia/Kolkata",
               year: "numeric",
-              month: "2-digit",
+              month: "short",
               day: "2-digit",
               hour: "2-digit",
               minute: "2-digit",
@@ -1417,20 +1417,61 @@ const StockChart = forwardRef<StockChartRef, StockChartProps>(
               );
 
               // Use original API datetime if available, otherwise fallback to formatted time
-              const displayTime =
-                originalDatetime ||
-                new Date((param.time as number) * 1000).toLocaleString(
-                  "en-IN",
-                  {
-                    timeZone: "Asia/Kolkata",
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
+              let displayTime: string;
+
+              if (originalDatetime) {
+                // Convert numeric month format to abbreviated format if needed
+                const convertNumericMonthFormat = (
+                  dateString: string
+                ): string => {
+                  if (!dateString) return "N/A";
+
+                  // Check if it's in YYYY-MM-DD format (e.g., "2025-01-09 14:15")
+                  const dateRegex = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/;
+                  const match = dateString.match(dateRegex);
+
+                  if (match) {
+                    const [, year, month, day, hour, minute] = match;
+                    const monthNames = [
+                      "Jan",
+                      "Feb",
+                      "Mar",
+                      "Apr",
+                      "May",
+                      "Jun",
+                      "Jul",
+                      "Aug",
+                      "Sep",
+                      "Oct",
+                      "Nov",
+                      "Dec",
+                    ];
+                    const monthIndex = parseInt(month) - 1;
+                    const monthName = monthNames[monthIndex];
+
+                    // Return in format "DD Mon YYYY HH:MM" (e.g., "09 Jan 2025 14:15")
+                    return `${day} ${monthName} ${year} ${hour}:${minute}`;
                   }
-                );
+
+                  // If not in YYYY-MM-DD format, return as-is
+                  return dateString;
+                };
+
+                displayTime = convertNumericMonthFormat(originalDatetime);
+              } else {
+                // Fallback to formatted time with abbreviated month
+                displayTime = new Date(
+                  (param.time as number) * 1000
+                ).toLocaleString("en-IN", {
+                  timeZone: "Asia/Kolkata",
+                  year: "numeric",
+                  month: "short",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                });
+              }
 
               setHoveredOHLC({
                 time: displayTime,

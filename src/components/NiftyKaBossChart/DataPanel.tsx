@@ -101,14 +101,63 @@ const DataPanel: React.FC<DataPanelProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // State for last updated time based on API data
-  // This will show the actual last candle datetime from the fetch_data API
-  // instead of current time, ensuring accurate display on market closed days
+  // State for last updated time - will continuously update during market hours
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>("Loading...");
+  const [isMarketOpen, setIsMarketOpen] = useState<boolean>(false);
 
-  // Function to get last updated time based on last candle datetime from API
-  // This ensures that on market closed days (like weekends), it shows the actual
-  // last update time from the API data instead of the current time
+  // Function to check if market is currently open
+  const checkMarketStatus = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Market hours: 9:15 AM to 3:30 PM IST
+    const marketStartHour = 9;
+    const marketStartMinute = 15;
+    const marketEndHour = 15; // 3:30 PM
+    const marketEndMinute = 30;
+
+    const isOpen =
+      (currentHour > marketStartHour ||
+        (currentHour === marketStartHour &&
+          currentMinute >= marketStartMinute)) &&
+      (currentHour < marketEndHour ||
+        (currentHour === marketEndHour && currentMinute <= marketEndMinute));
+
+    setIsMarketOpen(isOpen);
+    return isOpen;
+  };
+
+  // Function to get last updated time - continuously updates during market hours
+  const getLastUpdatedTime = () => {
+    const now = new Date();
+
+    // Format date as DD/MMM/YYYY
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
+
+    // Check market status
+    const marketOpen = checkMarketStatus();
+
+    if (marketOpen) {
+      // Market is open - show current time and it will keep updating
+      const timeStr = now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return `${dateStr}, ${timeStr}`;
+    } else {
+      // Market is closed - show last market close time (3:30 PM)
+      const timeStr = "3:30 PM";
+      return `${dateStr}, ${timeStr}`;
+    }
+  };
+
+  // Function to get last updated time from API for market closed scenarios
   const getLastUpdatedTimeFromAPI = async () => {
     try {
       // Fetch the latest RKB data to get the last candle datetime
@@ -129,9 +178,10 @@ const DataPanel: React.FC<DataPanelProps> = ({
           const apiDate = new Date(lastCandle.datetime);
 
           if (!isNaN(apiDate.getTime())) {
-            // Format date as DD/MM/YYYY
+            // Format date as DD/MMM/YYYY
             const day = apiDate.getDate().toString().padStart(2, "0");
-            const month = (apiDate.getMonth() + 1).toString().padStart(2, "0");
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[apiDate.getMonth()];
             const year = apiDate.getFullYear();
             const dateStr = `${day}/${month}/${year}`;
 
@@ -173,71 +223,92 @@ const DataPanel: React.FC<DataPanelProps> = ({
 
       // Fallback: if API data is not available, use current time logic
       console.log("🔄 Using fallback time calculation");
-      return getFallbackLastUpdatedTime();
+      return getLastUpdatedTime();
     } catch (error) {
       console.error("Error fetching last updated time from API:", error);
       // Fallback: if API fails, use current time logic
       console.log("🔄 Using fallback time calculation due to API error");
-      return getFallbackLastUpdatedTime();
+      return getLastUpdatedTime();
     }
   };
 
-  // Fallback function to get last updated time based on market hours (existing logic)
-  const getFallbackLastUpdatedTime = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-
-    // Market hours: 9:15 AM to 3:30 PM IST
-    const marketStartHour = 9;
-    const marketStartMinute = 15;
-    const marketEndHour = 15; // 3:30 PM
-    const marketEndMinute = 30;
-
-    // Format date as DD/MM/YYYY
-    const day = now.getDate().toString().padStart(2, "0");
-    const month = (now.getMonth() + 1).toString().padStart(2, "0");
-    const year = now.getFullYear();
-    const dateStr = `${day}/${month}/${year}`;
-
-    // Check if current time is within market hours
-    const isMarketOpen =
-      (currentHour > marketStartHour ||
-        (currentHour === marketStartHour &&
-          currentMinute >= marketStartMinute)) &&
-      (currentHour < marketEndHour ||
-        (currentHour === marketEndHour && currentMinute <= marketEndMinute));
-
-    if (isMarketOpen) {
-      // Market is open, show current time
-      const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-      return `${dateStr}, ${timeStr}`;
-    } else {
-      // Market is closed, show last market close time
-      const timeStr = "3:30 PM";
-      return `${dateStr}, ${timeStr}`;
-    }
-  };
-
-  // Update last updated time from API data
+  // Update last updated time - continuously during market hours, from API when closed
   useEffect(() => {
     const updateLastUpdatedTime = async () => {
-      const apiTime = await getLastUpdatedTimeFromAPI();
-      setLastUpdatedTime(apiTime);
+      // Check if market is open
+      const marketOpen = checkMarketStatus();
+
+      if (marketOpen) {
+        // Market is open - use current time (will update every second)
+        const currentTime = getLastUpdatedTime();
+        setLastUpdatedTime(currentTime);
+      } else {
+        // Market is closed - fetch from API to get last candle time
+        const apiTime = await getLastUpdatedTimeFromAPI();
+        setLastUpdatedTime(apiTime);
+      }
     };
 
     // Initial update
     updateLastUpdatedTime();
 
-    // Update every minute to keep it current
-    const interval = setInterval(updateLastUpdatedTime, 60000);
+    // Set up intervals based on market status
+    let timeInterval: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
-  }, []);
+    const setupIntervals = () => {
+      const marketOpen = checkMarketStatus();
+
+      if (marketOpen) {
+        // Market is open - update every second for real-time display
+        timeInterval = setInterval(() => {
+          const currentTime = getLastUpdatedTime();
+          setLastUpdatedTime(currentTime);
+        }, 1000);
+
+        console.log("🕐 Market is OPEN - Time updating every second");
+      } else {
+        // Market is closed - update every minute (for API data changes)
+        timeInterval = setInterval(async () => {
+          const apiTime = await getLastUpdatedTimeFromAPI();
+          setLastUpdatedTime(apiTime);
+        }, 60000);
+
+        console.log(
+          "🕐 Market is CLOSED - Time updating every minute from API"
+        );
+      }
+    };
+
+    // Initial setup
+    setupIntervals();
+
+    // Check market status every minute and adjust intervals accordingly
+    const marketCheckInterval = setInterval(() => {
+      const wasOpen = isMarketOpen;
+      const isNowOpen = checkMarketStatus();
+
+      if (wasOpen !== isNowOpen) {
+        // Market status changed - clear old interval and setup new one
+        if (timeInterval) {
+          clearInterval(timeInterval);
+        }
+        setupIntervals();
+
+        console.log(
+          `🔄 Market status changed: ${wasOpen ? "OPEN" : "CLOSED"} → ${
+            isNowOpen ? "OPEN" : "CLOSED"
+          }`
+        );
+      }
+    }, 60000);
+
+    return () => {
+      if (timeInterval) {
+        clearInterval(timeInterval);
+      }
+      clearInterval(marketCheckInterval);
+    };
+  }, [isMarketOpen]);
 
   // DECISION CLICK INTEGRATION: Sync external dialog control with internal state
   useEffect(() => {
@@ -373,8 +444,30 @@ const DataPanel: React.FC<DataPanelProps> = ({
           const change = parseFloat(changeStr);
           const changePercent = parseFloat(percentStr);
 
+          // Convert numeric month format if present
+          const convertNumericMonthFormat = (dateString: string): string => {
+            if (!dateString) return "N/A";
+            
+            // Check if it's in YYYY-MM-DD format (e.g., "2025-01-09")
+            const dateRegex = /^(\d{4})-(\d{2})-(\d{2})/;
+            const match = dateString.match(dateRegex);
+            
+            if (match) {
+              const [, year, month, day] = match;
+              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              const monthIndex = parseInt(month) - 1;
+              const monthName = monthNames[monthIndex];
+              
+              // Return in format "DD Mon YYYY" (e.g., "09 Jan 2025")
+              return `${day} ${monthName} ${year}`;
+            }
+            
+            // If not in YYYY-MM-DD format, return as-is
+            return dateString;
+          };
+
           return {
-            date: item.date,
+            date: convertNumericMonthFormat(item.date),
             change: isNaN(change) ? 0 : change,
             changePercent: isNaN(changePercent) ? 0 : changePercent,
           };
@@ -445,6 +538,28 @@ const DataPanel: React.FC<DataPanelProps> = ({
       return dateString.replace(/ GMT$/, "");
     };
 
+    // DATETIME FIX: Helper function to convert YYYY-MM-DD format to abbreviated month format
+    const convertNumericMonthFormat = (dateString: string): string => {
+      if (!dateString) return "N/A";
+      
+      // Check if it's in YYYY-MM-DD format (e.g., "2025-01-09")
+      const dateRegex = /^(\d{4})-(\d{2})-(\d{2})/;
+      const match = dateString.match(dateRegex);
+      
+      if (match) {
+        const [, year, month, day] = match;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthIndex = parseInt(month) - 1;
+        const monthName = monthNames[monthIndex];
+        
+        // Return in format "DD Mon YYYY" (e.g., "09 Jan 2025")
+        return `${day} ${monthName} ${year}`;
+      }
+      
+      // If not in YYYY-MM-DD format, return as-is
+      return dateString;
+    };
+
     // DATETIME FIX: Helper function to split datetime into date and time parts
     // This handles both formats: "2015-01-09 09:15" and "Thu, 24 Jul 2025 11:15:00"
     const splitDateTime = (
@@ -465,11 +580,14 @@ const DataPanel: React.FC<DataPanelProps> = ({
       // Handle format like "2015-01-09 09:15"
       if (cleaned.includes(" ")) {
         const [datePart, timePart] = cleaned.split(" ");
-        return { date: datePart || "N/A", time: timePart || "00:00" };
+        // Convert numeric month format for the date part
+        const convertedDatePart = convertNumericMonthFormat(datePart || "N/A");
+        return { date: convertedDatePart, time: timePart || "00:00" };
       }
 
       // Fallback: treat entire string as date
-      return { date: cleaned, time: "00:00" };
+      const convertedDate = convertNumericMonthFormat(cleaned);
+      return { date: convertedDate, time: "00:00" };
     };
 
     // DATETIME FIX: Use original datetime strings without transformation
@@ -480,11 +598,12 @@ const DataPanel: React.FC<DataPanelProps> = ({
     if (cleanDecision === "SELLYES") cleanDecision = "SELL";
     if (cleanDecision === "BUYYES") cleanDecision = "BUY";
 
-    // DATETIME FIX: Format H Date and L Date preserving original format
+    // DATETIME FIX: Format H Date and L Date with month format conversion
     const formatDateString = (dateString: string | undefined) => {
       if (!dateString) return "N/A";
-      // Just clean the GMT suffix, preserve the rest of the format
-      return cleanDateTimeString(dateString);
+      // First clean the GMT suffix, then convert numeric month format if needed
+      const cleaned = cleanDateTimeString(dateString);
+      return convertNumericMonthFormat(cleaned);
     };
 
     return {
@@ -1261,165 +1380,195 @@ const DataPanel: React.FC<DataPanelProps> = ({
             </Dialog>
           </div>
 
-          {/* Show real decisions data only */}
-          {lastDecisions.length > 0 ? (
-            <div
-              className={`rounded-lg border overflow-hidden shadow-lg ${
-                theme
-                  ? "bg-gray-50 border-gray-200"
-                  : "bg-gray-800 border-gray-700"
-              }`}
-            >
-              {/* Data source info */}
-              {/* <div
-                className={`text-sm p-3 border-b ${
-                  theme
-                    ? "text-gray-500 border-gray-200 bg-gray-100"
-                    : "text-gray-500 border-gray-700 bg-gray-900"
-                }`}
-              >
-                Last {lastDecisions.length} decisions
-              </div> */}
+                     {/* Show real decisions data only */}
+           {lastDecisions.length > 0 ? (
+             <div
+               className={`rounded-lg border overflow-hidden shadow-lg ${
+                 theme
+                   ? "bg-gray-50 border-gray-200"
+                   : "bg-gray-800 border-gray-700"
+               }`}
+             >
+               {/* Data source info */}
+               {/* <div
+                 className={`text-sm p-3 border-b ${
+                   theme
+                     ? "text-gray-500 border-gray-200 bg-gray-100"
+                     : "text-gray-500 border-gray-700 bg-gray-900"
+                 }`}
+               >
+                 Last {lastDecisions.length} decisions
+               </div> */}
 
-              {/* Scrollable Container */}
-              <div className="overflow-x-auto max-h-96">
-                <div className="min-w-[800px]">
-                  {/* Table Header */}
-                  <div
-                    className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm font-semibold border-b sticky top-0 ${
-                      theme
-                        ? "text-gray-700 border-gray-200 bg-gradient-to-r from-gray-100 to-gray-200"
-                        : "text-gray-300 border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800"
-                    }`}
-                  >
-                    <div className="min-w-[80px]">Date</div>
-                    <div className="min-w-[70px]">Decision</div>
-                    <div className="min-w-[80px]">Price</div>
-                    <div className="min-w-[70px]">HAS</div>
-                    <div className="min-w-[70px]">LAS</div>
-                    <div className="min-w-[100px]">Fav. Moves</div>
-                    <div className="min-w-[80px]">H. Date</div>
-                    <div className="min-w-[80px]">L. Date</div>
-                    <div className="min-w-[70px]">Returns</div>
-                  </div>
+               {/* Scrollable Container */}
+               <div className="overflow-x-auto max-h-96">
+                 <div className="min-w-[800px]">
+                   {/* Table Header */}
+                   <div
+                     className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm font-semibold border-b sticky top-0 ${
+                       theme
+                         ? "text-gray-700 border-gray-200 bg-gradient-to-r from-gray-100 to-gray-200"
+                         : "text-gray-300 border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800"
+                     }`}
+                   >
+                     <div className="min-w-[80px]">Date</div>
+                     <div className="min-w-[70px]">Decision</div>
+                     <div className="min-w-[80px]">Price</div>
+                     <div className="min-w-[70px]">HAS</div>
+                     <div className="min-w-[70px]">LAS</div>
+                     <div className="min-w-[100px]">Fav. Moves</div>
+                     <div className="min-w-[80px]">H. Date</div>
+                     <div className="min-w-[80px]">L. Date</div>
+                     <div className="min-w-[70px]">Returns</div>
+                   </div>
 
-                  {/* Table Rows */}
-                  <div
-                    className={`divide-y ${
-                      theme ? "divide-gray-200" : "divide-gray-700"
-                    }`}
-                  >
-                    {lastDecisions.map((decision, index) => (
-                      <div
-                        key={index}
-                        className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm transition-all duration-300 ease-in-out cursor-pointer rounded-md ${getRowBackgroundColor(
-                          decision.returns,
-                          decision.favMoves,
-                          `${decision.date} ${decision.time}` // DECISION CLICK INTEGRATION: Reconstruct datetime for highlighting
-                        )}`}
-                      >
-                        <div className="min-w-[80px]">
-                          <div
-                            className={`font-medium text-xs ${
-                              theme ? "text-gray-900" : "text-white"
-                            }`}
-                          >
-                            {decision.date}
-                          </div>
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-600" : "text-gray-400"
-                            }`}
-                          >
-                            {decision.time}
-                          </div>
-                        </div>
-                        <div className="min-w-[70px] flex items-center">
-                          <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                              decision.decision === "BUY"
-                                ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
-                                : "bg-red-600 text-white shadow-lg hover:bg-red-700"
-                            }`}
-                          >
-                            {decision.decision}
-                          </span>
-                        </div>
-                        <div
-                          className={`min-w-[80px] font-medium text-xs ${
-                            theme ? "text-gray-900" : "text-white"
-                          }`}
-                        >
-                          {decision.price.toFixed(2)}
-                        </div>
-                        <div
-                          className={`min-w-[70px] text-xs ${
-                            theme ? "text-gray-900" : "text-white"
-                          }`}
-                        >
-                          {decision.has.toFixed(2)}
-                        </div>
-                        <div
-                          className={`min-w-[70px] text-xs ${
-                            theme ? "text-gray-900" : "text-white"
-                          }`}
-                        >
-                          {decision.las.toFixed(2)}
-                        </div>
-                        <div className="min-w-[100px]">
-                          <div
-                            className={`font-medium text-xs ${
-                              theme ? "text-gray-900" : "text-white"
-                            }`}
-                          >
-                            {decision.favMoves >= 0 ? "+" : ""}
-                            {decision.favMoves.toFixed(2)}
-                          </div>
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-600" : "text-gray-400"
-                            }`}
-                          >
-                            ({decision.favMovesPercent.toFixed(2)}%)
-                          </div>
-                        </div>
-                        <div className="min-w-[80px]">
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-700" : "text-gray-300"
-                            }`}
-                          >
-                            {decision.hDate}
-                          </div>
-                        </div>
-                        <div className="min-w-[80px]">
-                          <div
-                            className={`text-xs ${
-                              theme ? "text-gray-700" : "text-gray-300"
-                            }`}
-                          >
-                            {decision.lDate}
-                          </div>
-                        </div>
-                        <div className="min-w-[70px] flex items-center">
-                          <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                              decision.returns === "Profit"
-                                ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
-                                : decision.returns === "Loss"
-                                ? "bg-red-600 text-white shadow-lg hover:bg-red-700"
-                                : "bg-yellow-600 text-white shadow-lg hover:bg-yellow-700"
-                            }`}
-                          >
-                            {decision.returns || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+                   {/* Table Rows */}
+                   <div
+                     className={`divide-y ${
+                       theme ? "divide-gray-200" : "divide-gray-700"
+                     }`}
+                   >
+                     {lastDecisions.map((decision, index) => {
+                       // Apply the same month format conversion for lastDecisions
+                       const convertNumericMonthFormat = (dateString: string): string => {
+                         if (!dateString) return "N/A";
+                         
+                         // Check if it's in YYYY-MM-DD format (e.g., "2025-01-09")
+                         const dateRegex = /^(\d{4})-(\d{2})-(\d{2})/;
+                         const match = dateString.match(dateRegex);
+                         
+                         if (match) {
+                           const [, year, month, day] = match;
+                           const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                           const monthIndex = parseInt(month) - 1;
+                           const monthName = monthNames[monthIndex];
+                           
+                           // Return in format "DD Mon YYYY" (e.g., "09 Jan 2025")
+                           return `${day} ${monthName} ${year}`;
+                         }
+                         
+                         // If not in YYYY-MM-DD format, return as-is
+                         return dateString;
+                       };
+
+                       // Convert the date and time to abbreviated month format
+                       const convertedDate = convertNumericMonthFormat(decision.date);
+                       const convertedTime = decision.time; // Time usually doesn't need month conversion
+                       const convertedHDate = convertNumericMonthFormat(decision.hDate || "");
+                       const convertedLDate = convertNumericMonthFormat(decision.lDate || "");
+
+                       return (
+                         <div
+                           key={index}
+                           className={`grid grid-cols-9 gap-2 px-3 py-3 text-sm transition-all duration-300 ease-in-out cursor-pointer rounded-md ${getRowBackgroundColor(
+                             decision.returns,
+                             decision.favMoves,
+                             `${decision.date} ${decision.time}` // DECISION CLICK INTEGRATION: Reconstruct datetime for highlighting
+                           )}`}
+                         >
+                           <div className="min-w-[80px]">
+                             <div
+                               className={`font-medium text-xs ${
+                                 theme ? "text-gray-900" : "text-white"
+                               }`}
+                             >
+                               {convertedDate}
+                             </div>
+                             <div
+                               className={`text-xs ${
+                                 theme ? "text-gray-600" : "text-gray-400"
+                               }`}
+                             >
+                               {convertedTime}
+                             </div>
+                           </div>
+                           <div className="min-w-[70px] flex items-center">
+                             <span
+                               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                 decision.decision === "BUY"
+                                   ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                   : "bg-red-600 text-white shadow-lg hover:bg-red-700"
+                               }`}
+                             >
+                               {decision.decision}
+                             </span>
+                           </div>
+                           <div
+                             className={`min-w-[80px] font-medium text-xs ${
+                               theme ? "text-gray-900" : "text-white"
+                             }`}
+                           >
+                             {decision.price.toFixed(2)}
+                           </div>
+                           <div
+                             className={`min-w-[70px] text-xs ${
+                               theme ? "text-gray-900" : "text-white"
+                             }`}
+                           >
+                             {decision.has.toFixed(2)}
+                           </div>
+                           <div
+                             className={`min-w-[70px] text-xs ${
+                               theme ? "text-gray-900" : "text-white"
+                             }`}
+                           >
+                             {decision.las.toFixed(2)}
+                           </div>
+                           <div className="min-w-[100px]">
+                             <div
+                               className={`font-medium text-xs ${
+                                 theme ? "text-gray-900" : "text-white"
+                               }`}
+                             >
+                               {decision.favMoves >= 0 ? "+" : ""}
+                               {decision.favMoves.toFixed(2)}
+                             </div>
+                             <div
+                               className={`text-xs ${
+                                 theme ? "text-gray-600" : "text-gray-400"
+                               }`}
+                             >
+                               ({decision.favMovesPercent.toFixed(2)}%)
+                             </div>
+                           </div>
+                           <div className="min-w-[80px]">
+                             <div
+                               className={`text-xs ${
+                                 theme ? "text-gray-700" : "text-gray-300"
+                               }`}
+                             >
+                               {convertedHDate}
+                             </div>
+                           </div>
+                           <div className="min-w-[80px]">
+                             <div
+                               className={`text-xs ${
+                                 theme ? "text-gray-700" : "text-gray-300"
+                               }`}
+                             >
+                               {convertedLDate}
+                             </div>
+                           </div>
+                           <div className="min-w-[70px] flex items-center">
+                             <span
+                               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                                 decision.returns === "Profit"
+                                   ? "bg-green-600 text-white shadow-lg hover:bg-green-700"
+                                   : decision.returns === "Loss"
+                                   ? "bg-red-600 text-white shadow-lg hover:bg-red-700"
+                                   : "bg-yellow-600 text-white shadow-lg hover:bg-yellow-700"
+                               }`}
+                             >
+                               {decision.returns || "N/A"}
+                             </span>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 </div>
+               </div>
+             </div>
           ) : (
             <div
               className={`rounded-lg border overflow-hidden shadow-lg ${

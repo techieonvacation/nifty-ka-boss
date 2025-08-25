@@ -34,7 +34,7 @@ const ClientTimeDisplay: React.FC = () => {
       const istTime = now.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         year: "numeric",
-        month: "2-digit",
+        month: "short",
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
@@ -270,7 +270,7 @@ const NiftyKaBossChart: React.FC<NiftyKaBossChartProps> = ({
             new Date(latest.time * 1000).toLocaleString("en-IN", {
               timeZone: "Asia/Kolkata",
               year: "numeric",
-              month: "2-digit",
+              month: "short",
               day: "2-digit",
               hour: "2-digit",
               minute: "2-digit",
